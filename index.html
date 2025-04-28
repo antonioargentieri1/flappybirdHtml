@@ -110,12 +110,17 @@
         const finalScoreElement = document.getElementById('final-score');
         
         // Costanti del gioco
-        const GRAVITY = 0.25;
-        const FLAP_SPEED = -5.5;
-        const PIPE_SPEED = 2;
-        const PIPE_SPACING = 200;
+        const GRAVITY = 0.5;         // Modificato per il movimento basato sul tempo
+        const FLAP_SPEED = -11;      // Modificato per il movimento basato sul tempo
+        const PIPE_SPEED = 4;        // Modificato per il movimento basato sul tempo
+        const PIPE_SPACING = 120;    // Modificato per adattarsi al nuovo timing
         const PIPE_GAP = 150;
         const PIPE_WIDTH = 60;
+        
+        // Variabili per il controllo del tempo
+        let lastTime = 0;
+        const FPS = 60;
+        const frameTime = 1000 / FPS;
         
         // Variabili di stato del gioco
         let gameStarted = false;
@@ -124,11 +129,17 @@
         let frames = 0;
         let bgX = 0; // Posizione X dello sfondo
         
-        // Caricamento dell'immagine di sfondo
+        // Caricamento dell'immagine di sfondo con gestione degli errori
         const bgImage = new Image();
         let bgImageLoaded = false;
         bgImage.onload = function() {
             bgImageLoaded = true;
+            console.log("Immagine di sfondo caricata con successo");
+        };
+        bgImage.onerror = function() {
+            console.error("Impossibile caricare l'immagine di sfondo");
+            bgImageLoaded = false;
+            // Il gioco continuerà a funzionare usando il fallback già presente nel codice
         };
         bgImage.src = 'bg1.jpg';
         
@@ -162,10 +173,10 @@
                 ctx.fill();
             },
             
-            update() {
+            update(dt) {
                 if (gameStarted && !gameOver) {
-                    this.velocity += GRAVITY;
-                    this.y += this.velocity;
+                    this.velocity += GRAVITY * dt;
+                    this.y += this.velocity * dt;
                     
                     // Controllo collisione con i bordi
                     if (this.y - this.height / 2 <= 0) {
@@ -228,9 +239,9 @@
                 ctx.fillRect(this.x - 5, this.bottomY, PIPE_WIDTH + 10, 20);
             }
             
-            update() {
+            update(dt) {
                 if (gameStarted && !gameOver) {
-                    this.x -= PIPE_SPEED;
+                    this.x -= PIPE_SPEED * dt;
                     
                     // Controllo se l'uccello è passato attraverso il tubo
                     if (!this.passed && this.x + PIPE_WIDTH < bird.x) {
@@ -273,11 +284,6 @@
         function drawBackground() {
             // Disegna l'immagine di sfondo se caricata
             if (bgImageLoaded) {
-                // Effetto parallasse: sposta lo sfondo
-                if (gameStarted && !gameOver) {
-                    bgX -= 0.5; // Velocità di scorrimento dello sfondo
-                }
-                
                 // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
                 ctx.drawImage(bgImage, bgX % canvas.width, 0, canvas.width, canvas.height);
                 ctx.drawImage(bgImage, (bgX % canvas.width) + canvas.width, 0, canvas.width, canvas.height);
@@ -333,22 +339,35 @@
         }
         
         // Funzione di aggiornamento principale
-        function update() {
-            // Aggiungi nuovi tubi
-            if (gameStarted && frames % PIPE_SPACING === 0) {
+        function update(currentTime) {
+            // Calcola il delta time (tempo trascorso dall'ultimo frame)
+            if (!lastTime) lastTime = currentTime;
+            const deltaTime = (currentTime - lastTime) / frameTime; // Normalizzato a 60 FPS
+            lastTime = currentTime;
+            
+            // Limita deltaTime per evitare comportamenti strani quando la tab è in background
+            const dt = Math.min(deltaTime, 3);
+            
+            // Aggiungi nuovi tubi in base al tempo e ai frame
+            if (gameStarted && !gameOver && frames % Math.floor(PIPE_SPACING) === 0) {
                 pipes.push(new Pipe());
             }
             
-            // Aggiorna l'uccello
-            bird.update();
+            // Aggiorna l'uccello con il delta time
+            bird.update(dt);
             
             // Aggiorna i tubi e rimuovi quelli fuori dallo schermo
             for (let i = pipes.length - 1; i >= 0; i--) {
-                pipes[i].update();
+                pipes[i].update(dt);
                 
                 if (pipes[i].x + PIPE_WIDTH < 0) {
                     pipes.splice(i, 1);
                 }
+            }
+            
+            // Aggiorna lo sfondo in base al tempo
+            if (gameStarted && !gameOver) {
+                bgX -= 0.5 * dt; // Velocità di scorrimento dello sfondo basata sul tempo
             }
             
             // Incrementa il contatore dei frame
@@ -376,8 +395,8 @@
         }
         
         // Funzione di gioco principale
-        function gameLoop() {
-            update();
+        function gameLoop(currentTime) {
+            update(currentTime);
             draw();
             requestAnimationFrame(gameLoop);
         }
@@ -399,6 +418,7 @@
             bgX = 0; // Resetta la posizione dello sfondo
             bird.reset();
             pipes.length = 0;  // Svuota l'array dei tubi
+            lastTime = 0;      // Resetta il tempo dell'ultimo frame
         }
         
         // Funzione per ricominciare il gioco
@@ -428,8 +448,8 @@
             bird.flap();
         });
         
-        // Avvia il game loop
-        gameLoop();
+        // Avvia il game loop con il timestamp corrente
+        requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
