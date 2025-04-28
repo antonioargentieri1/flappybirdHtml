@@ -110,17 +110,18 @@
         const finalScoreElement = document.getElementById('final-score');
         
         // Costanti del gioco
-        const GRAVITY = 0.5;         // Modificato per il movimento basato sul tempo
-        const FLAP_SPEED = -11;      // Modificato per il movimento basato sul tempo
-        const PIPE_SPEED = 4;        // Modificato per il movimento basato sul tempo
-        const PIPE_SPACING = 120;    // Modificato per adattarsi al nuovo timing
-        const PIPE_GAP = 150;
+        const GRAVITY = 0.25;
+        const FLAP_SPEED = -8;     // Aumentato per salti più ampi
+        const PIPE_SPEED = 2;
+        const PIPE_GAP = 225;      // Apertura tra i tubi (1.5 volte l'originale)
         const PIPE_WIDTH = 60;
         
         // Variabili per il controllo del tempo
         let lastTime = 0;
         const FPS = 60;
         const frameTime = 1000 / FPS;
+        let pipeCounter = 0;
+        let pipeInterval = 200;    // Intervallo tra i tubi (valore più alto = tubi più distanti)
         
         // Variabili di stato del gioco
         let gameStarted = false;
@@ -348,9 +349,13 @@
             // Limita deltaTime per evitare comportamenti strani quando la tab è in background
             const dt = Math.min(deltaTime, 3);
             
-            // Aggiungi nuovi tubi in base al tempo e ai frame
-            if (gameStarted && !gameOver && frames % Math.floor(PIPE_SPACING) === 0) {
-                pipes.push(new Pipe());
+            // Conta i frame normalizzati per la generazione dei tubi
+            if (gameStarted && !gameOver) {
+                pipeCounter += dt;
+                if (pipeCounter >= pipeInterval) { // Genera un tubo ogni pipeInterval frame normalizzati
+                    pipes.push(new Pipe());
+                    pipeCounter = 0;
+                }
             }
             
             // Aggiorna l'uccello con il delta time
@@ -415,6 +420,7 @@
             gameOver = false;
             score = 0;
             frames = 0;
+            pipeCounter = 0;
             bgX = 0; // Resetta la posizione dello sfondo
             bird.reset();
             pipes.length = 0;  // Svuota l'array dei tubi
