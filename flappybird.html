@@ -122,6 +122,7 @@
         let gameOver = false;
         let score = 0;
         let frames = 0;
+        let bgX = 0; // Posizione X dello sfondo
         
         // Caricamento dell'immagine di sfondo
         const bgImage = new Image();
@@ -272,7 +273,19 @@
         function drawBackground() {
             // Disegna l'immagine di sfondo se caricata
             if (bgImageLoaded) {
-                ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+                // Effetto parallasse: sposta lo sfondo
+                if (gameStarted && !gameOver) {
+                    bgX -= 0.5; // Velocità di scorrimento dello sfondo
+                }
+                
+                // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
+                ctx.drawImage(bgImage, bgX % canvas.width, 0, canvas.width, canvas.height);
+                ctx.drawImage(bgImage, (bgX % canvas.width) + canvas.width, 0, canvas.width, canvas.height);
+                
+                // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
+                if (Math.abs(bgX) >= canvas.width) {
+                    bgX = bgX % canvas.width;
+                }
             } else {
                 // Fallback se l'immagine non è caricata
                 ctx.fillStyle = '#70c5ce';
@@ -383,6 +396,7 @@
             gameOver = false;
             score = 0;
             frames = 0;
+            bgX = 0; // Resetta la posizione dello sfondo
             bird.reset();
             pipes.length = 0;  // Svuota l'array dei tubi
         }
