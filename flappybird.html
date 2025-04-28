@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONLYOUCAN</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #333;
+            font-family: Arial, sans-serif;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 360px;
+            height: 640px;
+        }
+        
+        #game-canvas {
+            border: 2px solid #fff;
+            background-color: #70c5ce;
+        }
+        
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        h1 {
+            color: #fff;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        
+        .score {
+            color: #fff;
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas" width="360" height="640"></canvas>
+        
+        <div id="start-screen">
+            <h1>ONLYOUCAN</h1>
+            <p class="score">Premi per saltare</p>
+            <button id="start-button">Inizia</button>
+        </div>
+        
+        <div id="game-over">
+            <h1>Game Over</h1>
+            <p class="score" id="final-score">Punteggio: 0</p>
+            <button id="restart-button">Riprova</button>
+        </div>
+    </div>
+
+    <script>
+        // Ottenimento degli elementi DOM
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over');
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        const finalScoreElement = document.getElementById('final-score');
+        
+        // Costanti del gioco
+        const GRAVITY = 0.25;
+        const FLAP_SPEED = -5.5;
+        const PIPE_SPEED = 2;
+        const PIPE_SPACING = 200;
+        const PIPE_GAP = 150;
+        const PIPE_WIDTH = 60;
+        
+        // Variabili di stato del gioco
+        let gameStarted = false;
+        let gameOver = false;
+        let score = 0;
+        let frames = 0;
+        
+        // Oggetto uccello (protagonista)
+        const bird = {
+            x: 50,
+            y: canvas.height / 2,
+            width: 40,
+            height: 30,
+            velocity: 0,
+            
+            draw() {
+                // Disegna un semplice "uccello" colorato
+                ctx.fillStyle = '#FF9900';
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Aggiungi un occhio
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(this.x + 10, this.y - 5, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Aggiungi un becco
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.moveTo(this.x + 20, this.y);
+                ctx.lineTo(this.x + 30, this.y - 5);
+                ctx.lineTo(this.x + 30, this.y + 5);
+                ctx.fill();
+            },
+            
+            update() {
+                if (gameStarted && !gameOver) {
+                    this.velocity += GRAVITY;
+                    this.y += this.velocity;
+                    
+                    // Controllo collisione con i bordi
+                    if (this.y - this.height / 2 <= 0) {
+                        this.y = this.height / 2;
+                        this.velocity = 0;
+                    }
+                    
+                    if (this.y + this.height / 2 >= canvas.height) {
+                        this.y = canvas.height - this.height / 2;
+                        this.velocity = 0;
+                        endGame();
+                    }
+                }
+            },
+            
+            flap() {
+                if (!gameOver) {
+                    this.velocity = FLAP_SPEED;
+                }
+            },
+            
+            reset() {
+                this.y = canvas.height / 2;
+                this.velocity = 0;
+            }
+        };
+        
+        // Array di tubi
+        const pipes = [];
+        
+        // Classe per i tubi
+        class Pipe {
+            constructor() {
+                this.x = canvas.width;
+                this.passed = false;
+                
+                // Posizione casuale dell'apertura
+                const minHeight = 50;
+                const maxHeight = canvas.height - PIPE_GAP - minHeight;
+                this.topHeight = Math.floor(Math.random() * (maxHeight - minHeight) + minHeight);
+                this.bottomY = this.topHeight + PIPE_GAP;
+                this.bottomHeight = canvas.height - this.bottomY;
+            }
+            
+            draw() {
+                // Tubo superiore
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(this.x, 0, PIPE_WIDTH, this.topHeight);
+                
+                // Parte inferiore del tubo superiore
+                ctx.fillStyle = '#3E8E41';
+                ctx.fillRect(this.x - 5, this.topHeight - 20, PIPE_WIDTH + 10, 20);
+                
+                // Tubo inferiore
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(this.x, this.bottomY, PIPE_WIDTH, this.bottomHeight);
+                
+                // Parte superiore del tubo inferiore
+                ctx.fillStyle = '#3E8E41';
+                ctx.fillRect(this.x - 5, this.bottomY, PIPE_WIDTH + 10, 20);
+            }
+            
+            update() {
+                if (gameStarted && !gameOver) {
+                    this.x -= PIPE_SPEED;
+                    
+                    // Controllo se l'uccello è passato attraverso il tubo
+                    if (!this.passed && this.x + PIPE_WIDTH < bird.x) {
+                        this.passed = true;
+                        score++;
+                    }
+                    
+                    // Controllo collisione
+                    if (this.checkCollision()) {
+                        endGame();
+                    }
+                }
+            }
+            
+            checkCollision() {
+                // Calcolo dei bordi dell'uccello
+                const birdLeft = bird.x - bird.width / 2;
+                const birdRight = bird.x + bird.width / 2;
+                const birdTop = bird.y - bird.height / 2;
+                const birdBottom = bird.y + bird.height / 2;
+                
+                // Calcolo dei bordi del tubo
+                const pipeLeft = this.x;
+                const pipeRight = this.x + PIPE_WIDTH;
+                
+                // Controllo collisione
+                if (
+                    birdRight > pipeLeft && 
+                    birdLeft < pipeRight && 
+                    (birdTop < this.topHeight || birdBottom > this.bottomY)
+                ) {
+                    return true;
+                }
+                
+                return false;
+            }
+        }
+        
+        // Funzione di disegno dello sfondo
+        function drawBackground() {
+            // Cielo
+            ctx.fillStyle = '#70c5ce';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Nuvole
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(100, 100, 30, 0, Math.PI * 2);
+            ctx.arc(130, 90, 30, 0, Math.PI * 2);
+            ctx.arc(160, 100, 25, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(280, 80, 20, 0, Math.PI * 2);
+            ctx.arc(300, 70, 25, 0, Math.PI * 2);
+            ctx.arc(320, 80, 15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Terreno
+            ctx.fillStyle = '#5EAA15';
+            ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+            
+            // Dettagli terreno
+            ctx.fillStyle = '#507B10';
+            for (let i = 0; i < canvas.width; i += 20) {
+                ctx.beginPath();
+                ctx.moveTo(i, canvas.height - 40);
+                ctx.lineTo(i + 10, canvas.height - 50);
+                ctx.lineTo(i + 20, canvas.height - 40);
+                ctx.fill();
+            }
+        }
+        
+        // Funzione per disegnare il punteggio
+        function drawScore() {
+            ctx.fillStyle = '#fff';
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.font = '40px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(score.toString(), canvas.width / 2, 50);
+            ctx.strokeText(score.toString(), canvas.width / 2, 50);
+        }
+        
+        // Funzione di aggiornamento principale
+        function update() {
+            // Aggiungi nuovi tubi
+            if (gameStarted && frames % PIPE_SPACING === 0) {
+                pipes.push(new Pipe());
+            }
+            
+            // Aggiorna l'uccello
+            bird.update();
+            
+            // Aggiorna i tubi e rimuovi quelli fuori dallo schermo
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                pipes[i].update();
+                
+                if (pipes[i].x + PIPE_WIDTH < 0) {
+                    pipes.splice(i, 1);
+                }
+            }
+            
+            // Incrementa il contatore dei frame
+            frames++;
+        }
+        
+        // Funzione di disegno principale
+        function draw() {
+            // Pulisci il canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Disegna lo sfondo
+            drawBackground();
+            
+            // Disegna i tubi
+            pipes.forEach(pipe => pipe.draw());
+            
+            // Disegna l'uccello
+            bird.draw();
+            
+            // Disegna il punteggio
+            if (gameStarted) {
+                drawScore();
+            }
+        }
+        
+        // Funzione di gioco principale
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Funzione per terminare il gioco
+        function endGame() {
+            gameOver = true;
+            finalScoreElement.textContent = `Punteggio: ${score}`;
+            gameOverScreen.style.display = 'flex';
+        }
+        
+        // Funzione per iniziare il gioco
+        function startGame() {
+            startScreen.style.display = 'none';
+            gameStarted = true;
+            gameOver = false;
+            score = 0;
+            frames = 0;
+            bird.reset();
+            pipes.length = 0;  // Svuota l'array dei tubi
+        }
+        
+        // Funzione per ricominciare il gioco
+        function restartGame() {
+            gameOverScreen.style.display = 'none';
+            startGame();
+        }
+        
+        // Event listeners
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', restartGame);
+        
+        // Event listener per il salto dell'uccello
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' || e.key === ' ') {
+                if (!gameStarted) {
+                    startGame();
+                }
+                bird.flap();
+            }
+        });
+        
+        canvas.addEventListener('click', function() {
+            if (!gameStarted) {
+                startGame();
+            }
+            bird.flap();
+        });
+        
+        // Avvia il game loop
+        gameLoop();
+    </script>
+</body>
+</html>
