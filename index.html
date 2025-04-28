@@ -130,7 +130,7 @@
         let frames = 0;
         let bgX = 0; // Posizione X dello sfondo
         
-        // Caricamento dell'immagine di sfondo con gestione degli errori
+        // Caricamento delle immagini
         const bgImage = new Image();
         let bgImageLoaded = false;
         bgImage.onload = function() {
@@ -144,34 +144,77 @@
         };
         bgImage.src = 'bg1.jpg';
         
+        // Caricamento dell'immagine del personaggio
+        const birdImage = new Image();
+        let birdImageLoaded = false;
+        let birdImageRatio = 1; // Rapporto altezza/larghezza dell'immagine
+        
+        birdImage.onload = function() {
+            birdImageLoaded = true;
+            birdImageRatio = birdImage.height / birdImage.width;
+            console.log("Immagine del personaggio caricata con successo", birdImage.width, birdImage.height);
+            
+            // Aggiorna le dimensioni dell'uccello in base all'immagine caricata
+            bird.width = 50; // Larghezza fissa
+            bird.height = bird.width * birdImageRatio; // Altezza proporzionale
+        };
+        
+        birdImage.onerror = function() {
+            console.error("Impossibile caricare l'immagine del personaggio");
+            birdImageLoaded = false;
+            // Il gioco continuerà a funzionare usando il fallback già presente nel codice
+        };
+        birdImage.src = 'elvio_1.png';
+        
         // Oggetto uccello (protagonista)
         const bird = {
             x: 50,
             y: canvas.height / 2,
-            width: 40,
-            height: 30,
+            width: 50,  // Larghezza base che verrà aggiornata dopo il caricamento dell'immagine
+            height: 50, // Altezza iniziale che verrà aggiornata per mantenere le proporzioni
             velocity: 0,
             
             draw() {
-                // Disegna un semplice "uccello" colorato
-                ctx.fillStyle = '#FF9900';
-                ctx.beginPath();
-                ctx.ellipse(this.x, this.y, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Aggiungi un occhio
-                ctx.fillStyle = '#000';
-                ctx.beginPath();
-                ctx.arc(this.x + 10, this.y - 5, 4, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Aggiungi un becco
-                ctx.fillStyle = '#FF0000';
-                ctx.beginPath();
-                ctx.moveTo(this.x + 20, this.y);
-                ctx.lineTo(this.x + 30, this.y - 5);
-                ctx.lineTo(this.x + 30, this.y + 5);
-                ctx.fill();
+                if (birdImageLoaded) {
+                    // Disegna l'immagine "elvio_1.png" con le proporzioni originali
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    
+                    // Ruota leggermente l'immagine in base alla velocità (per effetto di volo)
+                    // Il fattore 0.02 invece di 0.05 riduce l'inclinazione di circa il 60%
+                    const rotation = this.velocity * 0.02;
+                    ctx.rotate(rotation);
+                    
+                    // Disegna l'immagine centrata mantenendo le proporzioni originali
+                    ctx.drawImage(
+                        birdImage, 
+                        -this.width / 2, 
+                        -this.height / 2, 
+                        this.width, 
+                        this.height
+                    );
+                    ctx.restore();
+                } else {
+                    // Fallback: disegna un semplice uccello colorato se l'immagine non è caricata
+                    ctx.fillStyle = '#FF9900';
+                    ctx.beginPath();
+                    ctx.ellipse(this.x, this.y, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Aggiungi un occhio
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(this.x + 10, this.y - 5, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Aggiungi un becco
+                    ctx.fillStyle = '#FF0000';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 20, this.y);
+                    ctx.lineTo(this.x + 30, this.y - 5);
+                    ctx.lineTo(this.x + 30, this.y + 5);
+                    ctx.fill();
+                }
             },
             
             update(dt) {
