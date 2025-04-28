@@ -312,20 +312,6 @@
                 ctx.arc(320, 80, 15, 0, Math.PI * 2);
                 ctx.fill();
             }
-            
-            // Terreno
-            ctx.fillStyle = '#5EAA15';
-            ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
-            
-            // Dettagli terreno
-            ctx.fillStyle = '#507B10';
-            for (let i = 0; i < canvas.width; i += 20) {
-                ctx.beginPath();
-                ctx.moveTo(i, canvas.height - 40);
-                ctx.lineTo(i + 10, canvas.height - 50);
-                ctx.lineTo(i + 20, canvas.height - 40);
-                ctx.fill();
-            }
         }
         
         // Funzione per disegnare il punteggio
