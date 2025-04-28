@@ -123,6 +123,14 @@
         let score = 0;
         let frames = 0;
         
+        // Caricamento dell'immagine di sfondo
+        const bgImage = new Image();
+        let bgImageLoaded = false;
+        bgImage.onload = function() {
+            bgImageLoaded = true;
+        };
+        bgImage.src = 'bg1.jpg';
+        
         // Oggetto uccello (protagonista)
         const bird = {
             x: 50,
@@ -262,23 +270,28 @@
         
         // Funzione di disegno dello sfondo
         function drawBackground() {
-            // Cielo
-            ctx.fillStyle = '#70c5ce';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Nuvole
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(100, 100, 30, 0, Math.PI * 2);
-            ctx.arc(130, 90, 30, 0, Math.PI * 2);
-            ctx.arc(160, 100, 25, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(280, 80, 20, 0, Math.PI * 2);
-            ctx.arc(300, 70, 25, 0, Math.PI * 2);
-            ctx.arc(320, 80, 15, 0, Math.PI * 2);
-            ctx.fill();
+            // Disegna l'immagine di sfondo se caricata
+            if (bgImageLoaded) {
+                ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+            } else {
+                // Fallback se l'immagine non è caricata
+                ctx.fillStyle = '#70c5ce';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Nuvole
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(100, 100, 30, 0, Math.PI * 2);
+                ctx.arc(130, 90, 30, 0, Math.PI * 2);
+                ctx.arc(160, 100, 25, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(280, 80, 20, 0, Math.PI * 2);
+                ctx.arc(300, 70, 25, 0, Math.PI * 2);
+                ctx.arc(320, 80, 15, 0, Math.PI * 2);
+                ctx.fill();
+            }
             
             // Terreno
             ctx.fillStyle = '#5EAA15';
