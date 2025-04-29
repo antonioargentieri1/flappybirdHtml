@@ -70,6 +70,54 @@
             padding: 20px;
         }
         
+        #character-select-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            box-sizing: border-box;
+            padding: 20px;
+        }
+        
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 15px;
+            margin: 20px 0;
+            max-width: 300px;
+        }
+        
+        .character-item {
+            width: 80px;
+            height: 80px;
+            background-color: #333;
+            border: 2px solid #555;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .character-item.selected {
+            border: 2px solid #4CAF50;
+            box-shadow: 0 0 10px #4CAF50;
+        }
+        
+        .character-item img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
+        
         #game-over {
             position: absolute;
             top: 0;
@@ -161,8 +209,46 @@
         <div id="start-screen">
             <h1>ONLYOUCAN</h1>
             <p class="score">Premi per saltare</p>
+            <button id="character-select-button">Scegli Personaggio</button>
             <button id="start-button">Inizia</button>
             <button id="spotify-button">Spotify</button>
+        </div>
+        
+        <div id="character-select-screen">
+            <h1>Scegli il Personaggio</h1>
+            <div class="character-grid">
+                <div class="character-item selected" data-character="0">
+                    <img src="elvio_1.png" alt="Personaggio 1">
+                </div>
+                <div class="character-item" data-character="1">
+                    <img src="elvio_1.png" alt="Personaggio 2">
+                </div>
+                <div class="character-item" data-character="2">
+                    <img src="elvio_1.png" alt="Personaggio 3">
+                </div>
+                <div class="character-item" data-character="3">
+                    <img src="elvio_1.png" alt="Personaggio 4">
+                </div>
+                <div class="character-item" data-character="4">
+                    <img src="elvio_1.png" alt="Personaggio 5">
+                </div>
+                <div class="character-item" data-character="5">
+                    <img src="elvio_1.png" alt="Personaggio 6">
+                </div>
+                <div class="character-item" data-character="6">
+                    <img src="elvio_1.png" alt="Personaggio 7">
+                </div>
+                <div class="character-item" data-character="7">
+                    <img src="elvio_1.png" alt="Personaggio 8">
+                </div>
+                <div class="character-item" data-character="8">
+                    <img src="elvio_1.png" alt="Personaggio 9">
+                </div>
+                <div class="character-item" data-character="9">
+                    <img src="elvio_1.png" alt="Personaggio 10">
+                </div>
+            </div>
+            <button id="back-button">Indietro</button>
         </div>
         
         <div id="game-over">
@@ -237,6 +323,45 @@
         const soundtrack = document.getElementById('soundtrack');
         const audioToggle = document.getElementById('audio-toggle');
         let audioEnabled = true;
+        
+        // Riferimenti agli elementi della selezione personaggi
+        const characterSelectScreen = document.getElementById('character-select-screen');
+        const characterSelectButton = document.getElementById('character-select-button');
+        const backButton = document.getElementById('back-button');
+        const characterItems = document.querySelectorAll('.character-item');
+        
+        // Variabile per tenere traccia del personaggio selezionato
+        let selectedCharacter = 0;
+        
+        // Event listener per il pulsante di selezione personaggio
+        characterSelectButton.addEventListener('click', function() {
+            startScreen.style.display = 'none';
+            characterSelectScreen.style.display = 'flex';
+        });
+        
+        // Event listener per il pulsante "Indietro"
+        backButton.addEventListener('click', function() {
+            characterSelectScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+        });
+        
+        // Event listener per i personaggi selezionabili
+        characterItems.forEach(item => {
+            item.addEventListener('click', function() {
+                // Rimuovi la classe 'selected' da tutti gli elementi
+                characterItems.forEach(el => el.classList.remove('selected'));
+                
+                // Aggiungi la classe 'selected' all'elemento cliccato
+                this.classList.add('selected');
+                
+                // Aggiorna il personaggio selezionato
+                selectedCharacter = parseInt(this.getAttribute('data-character'));
+                console.log('Personaggio selezionato:', selectedCharacter);
+                
+                // Nota: per ora non cambia nulla perché tutti i personaggi usano le stesse immagini
+                // In futuro qui si potrebbero caricare immagini diverse per ogni personaggio
+            });
+        });
         
         // Event listener per il pulsante Spotify
         spotifyButton.addEventListener('click', function() {
