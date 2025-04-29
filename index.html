@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-touch-fullscreen" content="yes">
     <title>ONLYOUCAN</title>
     <style>
         body {
@@ -197,9 +198,10 @@
             canvas.style.width = `${newWidth}px`;
             canvas.style.height = `${newHeight}px`;
             
-            // Aggiorna le dimensioni interne del canvas
-            // Nota: manteniamo le dimensioni interne di rendering fisse
-            // per evitare problemi con la logica del gioco
+            // Leggera ottimizzazione per iOS - non invasiva
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                canvas.style.willChange = 'transform';
+            }
         }
 
         // Ridimensiona il gioco all'avvio
@@ -559,7 +561,23 @@
         }
         
         // Funzione di gioco principale
+        let lastFrameTime = 0;
+        
         function gameLoop(currentTime) {
+            // Calcola il tempo trascorso dall'ultimo frame (più stabile)
+            if (lastFrameTime === 0) {
+                lastFrameTime = currentTime;
+            }
+            
+            // Limita FPS su iPad per migliorare la stabilità
+            const elapsed = currentTime - lastFrameTime;
+            if (/iPad/.test(navigator.userAgent) && elapsed < 16) { // circa 60 FPS
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+            
+            lastFrameTime = currentTime;
+            
             update(currentTime);
             draw();
             requestAnimationFrame(gameLoop);
