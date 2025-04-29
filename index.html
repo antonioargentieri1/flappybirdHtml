@@ -113,6 +113,18 @@
             background-color: #45a049;
         }
         
+        /* Stile per il pulsante Spotify */
+        #spotify-button {
+            background-color: #1DB954; /* Colore verde di Spotify */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #spotify-button:hover {
+            background-color: #1AA34A; /* Verde leggermente più scuro per l'hover */
+        }
+        
         /* Stile per il controllo audio */
         #audio-controls {
             position: absolute;
@@ -150,6 +162,7 @@
             <h1>ONLYOUCAN</h1>
             <p class="score">Premi per saltare</p>
             <button id="start-button">Inizia</button>
+            <button id="spotify-button">Spotify</button>
         </div>
         
         <div id="game-over">
@@ -218,11 +231,17 @@
         const startButton = document.getElementById('start-button');
         const restartButton = document.getElementById('restart-button');
         const finalScoreElement = document.getElementById('final-score');
+        const spotifyButton = document.getElementById('spotify-button');
         
         // Elementi audio
         const soundtrack = document.getElementById('soundtrack');
         const audioToggle = document.getElementById('audio-toggle');
         let audioEnabled = true;
+        
+        // Event listener per il pulsante Spotify
+        spotifyButton.addEventListener('click', function() {
+            window.open('https://open.spotify.com/artist/7wsOlF3P2t6BB1ali9W1t1?si=bQuFkTYrQsmO42ZqxtTqXA', '_blank');
+        });
         
         // Precarica l'audio per migliorare la reattività
         window.addEventListener('load', function() {
