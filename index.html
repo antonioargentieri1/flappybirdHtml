@@ -179,12 +179,14 @@
         
         /* Stile per il pulsante Spotify */
         #spotify-button {
-            background-color: transparent;
-            margin: 10px 0; /* Aggiunge margine sopra e sotto */
+            background-color: #1DB954; /* Colore verde di Spotify */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         #spotify-button:hover {
-            background-color: transparent;
+            background-color: #1AA34A; /* Verde leggermente più scuro per l'hover */
         }
         
         /* Stile per il controllo audio */
@@ -214,38 +216,6 @@
         #audio-toggle:hover {
             background-color: rgba(0, 0, 0, 0.7);
         }
-/* Stile significativamente migliorato per il bottone Spotify */
-.image-button {
-    background: none;
-    border: none;
-    padding: 15px;  /* Padding più grande */
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s;
-    min-width: 200px; /* Larghezza minima aumentata */
-    min-height: 80px; /* Altezza minima aumentata */
-    margin: 15px 0;   /* Margine aumentato */
-}
-
-.image-button:hover {
-    transform: scale(1.1);
-}
-
-.button-image {
-    max-width: 190%;
-    max-height: 190%;
-    width: auto;
-    height: 150px; /* Altezza dell'immagine raddoppiata */
-    object-fit: contain;
-}
-
-/* Stile specifico per il bottone Spotify */
-#spotify-button {
-    background-color: transparent;
-    margin: 20px 0; /* Margine aumentato */
-}
     </style>
 </head>
 <body>
@@ -257,9 +227,7 @@
             <p class="score">Premi per saltare</p>
             <button id="start-button">Inizia</button>
             <button id="character-select-button">Scegli Personaggio</button>
-            <button id="spotify-button" class="image-button">
-                <img src="b_spotify.png" alt="Spotify" class="button-image">
-            </button>
+            <button id="spotify-button">Spotify</button>
         </div>
         
         <div id="character-select-screen">
@@ -695,49 +663,50 @@
         }
         
         // Funzione di disegno dello sfondo
-        function drawBackground() {
-            // Disegna l'immagine di sfondo se caricata
-            if (bgImageLoaded) {
-                // Ottieni le dimensioni del canvas
-                const canvasWidth = canvas.width;
-                const canvasHeight = canvas.height;
-                
-                // Calcola le dimensioni proporzionali dell'immagine per coprire tutto il canvas
-                const bgRatio = bgImage.width / bgImage.height;
-                const canvasRatio = canvasWidth / canvasHeight;
-                
-                let drawWidth, drawHeight, offsetX, offsetY;
-                
-                // Se l'immagine è più larga (rispetto all'altezza) del canvas
-                if (bgRatio > canvasRatio) {
-                    drawHeight = canvasHeight;
-                    drawWidth = drawHeight * bgRatio;
-                    offsetX = (canvasWidth - drawWidth) / 2;
-                    offsetY = 0;
-                } else {
-                    // Se l'immagine è più alta (rispetto alla larghezza) del canvas
-                    drawWidth = canvasWidth;
-                    drawHeight = drawWidth / bgRatio;
-                    offsetX = 0;
-                    offsetY = (canvasHeight - drawHeight) / 2;
-                }
-                
-                // Disegna l'immagine con parallasse orizzontale
-                ctx.drawImage(bgImage, bgX + offsetX, offsetY, drawWidth, drawHeight);
-                
-                // Disegna una seconda copia dell'immagine per coprire lo spazio quando la prima scorre fuori
-                ctx.drawImage(bgImage, bgX + offsetX + drawWidth, offsetY, drawWidth, drawHeight);
-                
-                // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
-                if (Math.abs(bgX) >= drawWidth) {
-                    bgX = bgX % drawWidth;
-                }
-            } else {
-                // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
+        // Funzione di disegno dello sfondo corretta
+function drawBackground() {
+    // Disegna l'immagine di sfondo se caricata
+    if (bgImageLoaded) {
+        // Ottieni le dimensioni del canvas
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        
+        // Calcola le dimensioni proporzionali dell'immagine per coprire tutto il canvas
+        const bgRatio = bgImage.width / bgImage.height;
+        const canvasRatio = canvasWidth / canvasHeight;
+        
+        let drawWidth, drawHeight, offsetX, offsetY;
+        
+        // Se l'immagine è più larga (rispetto all'altezza) del canvas
+        if (bgRatio > canvasRatio) {
+            drawHeight = canvasHeight;
+            drawWidth = drawHeight * bgRatio;
+            offsetX = (canvasWidth - drawWidth) / 2;
+            offsetY = 0;
+        } else {
+            // Se l'immagine è più alta (rispetto alla larghezza) del canvas
+            drawWidth = canvasWidth;
+            drawHeight = drawWidth / bgRatio;
+            offsetX = 0;
+            offsetY = (canvasHeight - drawHeight) / 2;
         }
+        
+        // Disegna l'immagine con parallasse orizzontale
+        ctx.drawImage(bgImage, bgX + offsetX, offsetY, drawWidth, drawHeight);
+        
+        // Disegna una seconda copia dell'immagine per coprire lo spazio quando la prima scorre fuori
+        ctx.drawImage(bgImage, bgX + offsetX + drawWidth, offsetY, drawWidth, drawHeight);
+        
+        // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
+        if (Math.abs(bgX) >= drawWidth) {
+            bgX = bgX % drawWidth;
+        }
+    } else {
+        // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+}
         
         // Funzione per disegnare il punteggio
         function drawScore() {
@@ -795,7 +764,6 @@
             // Pulisci il canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            //
             // Disegna lo sfondo
             drawBackground();
             
