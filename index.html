@@ -234,7 +234,7 @@
             <h1>Scegli il Personaggio</h1>
             <div class="character-grid">
                 <div class="character-item selected" data-character="0">
-                    <img src="elvio_1.png" alt="Personaggio 1">
+                    <img src="niko_1.png" alt="Personaggio 1">
                 </div>
                 <div class="character-item" data-character="1">
                     <img src="elvio_1.png" alt="Personaggio 2">
@@ -351,6 +351,20 @@
         // Variabile per tenere traccia del personaggio selezionato
         let selectedCharacter = 0;
         
+        // Configurazione dei personaggi (NUOVO)
+        const characters = [
+            { 
+                name: "Niko",
+                baseImage: "niko_1.png",
+                jumpImage: "niko_2.png"
+            },
+            {
+                name: "Elvio",
+                baseImage: "elvio_1.png",
+                jumpImage: "elvio_2.png"
+            }
+        ];
+        
         // Event listener per il pulsante di selezione personaggio
         characterSelectButton.addEventListener('click', function() {
             startScreen.style.display = 'none';
@@ -376,10 +390,25 @@
                 selectedCharacter = parseInt(this.getAttribute('data-character'));
                 console.log('Personaggio selezionato:', selectedCharacter);
                 
-                // Nota: per ora non cambia nulla perché tutti i personaggi usano le stesse immagini
-                // In futuro qui si potrebbero caricare immagini diverse per ogni personaggio
+                // Carica le immagini del personaggio selezionato
+                loadCharacterImages();
             });
         });
+        
+        // Funzione per caricare le immagini del personaggio selezionato (NUOVO)
+        function loadCharacterImages() {
+            // Determina quale personaggio usare (Niko o Elvio)
+            // Se il personaggio selezionato è 0, usa Niko, altrimenti usa Elvio
+            const characterIndex = selectedCharacter === 0 ? 0 : 1;
+            
+            // Carica le immagini
+            birdImage1.src = characters[characterIndex].baseImage;
+            birdImage2.src = characters[characterIndex].jumpImage;
+            
+            console.log(`Caricando immagini per ${characters[characterIndex].name}:`, 
+                        characters[characterIndex].baseImage, 
+                        characters[characterIndex].jumpImage);
+        }
         
         // Event listener per il pulsante Spotify
         spotifyButton.addEventListener('click', function() {
@@ -480,8 +509,9 @@
             birdImage2Loaded = false;
         };
         
-        birdImage1.src = 'elvio_1.png'; // Immagine per la discesa
-        birdImage2.src = 'elvio_2.png'; // Immagine per la salita
+        // Carica inizialmente le immagini di Niko (visto che è il personaggio selezionato di default)
+        birdImage1.src = 'niko_1.png'; // Immagine per la discesa
+        birdImage2.src = 'niko_2.png'; // Immagine per la salita
         
         // Oggetto uccello (protagonista)
         const bird = {
@@ -498,7 +528,7 @@
                 const imageLoaded = isRising ? birdImage2Loaded : birdImage1Loaded;
                 
                 if (imageLoaded) {
-                    // Disegna l'immagine del personaggio appropriata (elvio_1.png o elvio_2.png)
+                    // Disegna l'immagine del personaggio appropriata (niko_1.png/niko_2.png o elvio_1.png/elvio_2.png)
                     ctx.save();
                     ctx.translate(this.x, this.y);
                     
