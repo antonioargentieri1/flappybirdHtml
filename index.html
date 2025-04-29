@@ -255,6 +255,7 @@
             <h1>Game Over</h1>
             <p class="score" id="final-score">Punteggio: 0</p>
             <button id="restart-button">Riprova</button>
+            <button id="home-button">Torna alla Home</button>
         </div>
         
         <div id="audio-controls">
@@ -316,6 +317,7 @@
         const gameOverScreen = document.getElementById('game-over');
         const startButton = document.getElementById('start-button');
         const restartButton = document.getElementById('restart-button');
+        const homeButton = document.getElementById('home-button');
         const finalScoreElement = document.getElementById('final-score');
         const spotifyButton = document.getElementById('spotify-button');
         
@@ -791,6 +793,33 @@
             }
         }
         
+        // Funzione per tornare alla schermata home
+        function goHome() {
+            // Arresta immediatamente qualsiasi fade out in corso
+            if (fadeAudioInterval) {
+                clearInterval(fadeAudioInterval);
+                fadeAudioInterval = null;
+                soundtrack.volume = 1.0; // Ripristina subito il volume al massimo
+            }
+            
+            // Ferma la musica
+            soundtrack.pause();
+            soundtrack.currentTime = 0;
+            
+            // Nasconde la schermata di game over
+            gameOverScreen.style.display = 'none';
+            
+            // Resetta i parametri di gioco
+            gameStarted = false;
+            gameOver = false;
+            score = 0;
+            pipes.length = 0;
+            bird.reset();
+            
+            // Mostra la schermata iniziale
+            startScreen.style.display = 'flex';
+        }
+        
         // Funzione per ricominciare il gioco
         function restartGame() {
             // Arresta immediatamente qualsiasi fade out in corso
@@ -807,6 +836,7 @@
         // Event listeners
         startButton.addEventListener('click', startGame);
         restartButton.addEventListener('click', restartGame);
+        homeButton.addEventListener('click', goHome);
         
         // Event listener per il salto dell'uccello
         document.addEventListener('keydown', function(e) {
