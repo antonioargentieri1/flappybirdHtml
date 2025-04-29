@@ -151,13 +151,24 @@
         const audioToggle = document.getElementById('audio-toggle');
         let audioEnabled = true;
         
+        // Precarica l'audio per migliorare la reattività
+        window.addEventListener('load', function() {
+            // Precarica l'audio silenziosamente (senza riprodurlo)
+            soundtrack.load();
+            soundtrack.volume = 1.0;
+            console.log("Audio precaricato");
+        });
+        
         // Gestione audio
         function toggleAudio() {
             if (audioEnabled) {
+                // Se attualmente abilitato, disabilita
                 soundtrack.pause();
                 audioToggle.textContent = '🔇';
             } else {
-                if (gameStarted) {
+                // Se attualmente disabilitato, abilita
+                if (gameStarted && !gameOver) {
+                    soundtrack.volume = 1.0; // Assicurati che il volume sia al massimo
                     soundtrack.play().catch(e => console.error("Errore durante la riproduzione audio:", e));
                 }
                 audioToggle.textContent = '🔊';
@@ -511,6 +522,9 @@
             requestAnimationFrame(gameLoop);
         }
         
+        // Variabile per tenere traccia dell'intervallo di fade audio
+        let fadeAudioInterval = null;
+        
         // Funzione per terminare il gioco
         function endGame() {
             gameOver = true;
@@ -519,17 +533,20 @@
             
             // Ferma la musica quando il gioco termina o riduci il volume gradualmente
             if (audioEnabled) {
-                // Opzione 1: ferma immediatamente la musica
-                // soundtrack.pause();
+                // Ferma qualsiasi fade in corso se c'è
+                if (fadeAudioInterval) {
+                    clearInterval(fadeAudioInterval);
+                }
                 
-                // Opzione 2: sfuma gradualmente il volume (fade out)
+                // Sfuma gradualmente il volume (fade out)
                 let volume = soundtrack.volume;
-                const fadeAudio = setInterval(function() {
+                fadeAudioInterval = setInterval(function() {
                     if (volume > 0.1) {
                         volume -= 0.1;
                         soundtrack.volume = volume;
                     } else {
-                        clearInterval(fadeAudio);
+                        clearInterval(fadeAudioInterval);
+                        fadeAudioInterval = null;
                         soundtrack.pause();
                         soundtrack.volume = 1.0; // Ripristina il volume per la prossima partita
                     }
@@ -552,18 +569,32 @@
             
             // Avvia la musica quando il gioco inizia (solo se l'audio è abilitato)
             if (audioEnabled) {
+                // Ferma l'audio prima se sta ancora riproducendo
+                soundtrack.pause();
                 soundtrack.currentTime = 0; // Riavvia dall'inizio
-                soundtrack.play().catch(e => {
-                    console.error("Errore durante la riproduzione audio:", e);
-                    // In alcuni browser, l'audio può essere riprodotto solo dopo un'interazione dell'utente
-                    // Poiché stiamo già rispondendo a un'interazione (click sul pulsante Start), 
-                    // questo non dovrebbe essere un problema, ma gestiamo comunque l'errore
-                });
+                soundtrack.volume = 1.0;    // Assicurati che il volume sia al massimo
+                
+                // Piccolo timeout per assicurarsi che tutti i cambiamenti audio siano applicati
+                setTimeout(() => {
+                    soundtrack.play().catch(e => {
+                        console.error("Errore durante la riproduzione audio:", e);
+                        // In alcuni browser, l'audio può essere riprodotto solo dopo un'interazione dell'utente
+                        // Poiché stiamo già rispondendo a un'interazione (click sul pulsante Start), 
+                        // questo non dovrebbe essere un problema, ma gestiamo comunque l'errore
+                    });
+                }, 50);
             }
         }
         
         // Funzione per ricominciare il gioco
         function restartGame() {
+            // Arresta immediatamente qualsiasi fade out in corso
+            if (fadeAudioInterval) {
+                clearInterval(fadeAudioInterval);
+                fadeAudioInterval = null;
+                soundtrack.volume = 1.0; // Ripristina subito il volume al massimo
+            }
+            
             gameOverScreen.style.display = 'none';
             startGame();
         }
