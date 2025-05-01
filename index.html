@@ -54,7 +54,7 @@
             }
         }
         
-        #start-screen {
+        #start-screen, #character-select-screen, #game-over {
             position: absolute;
             top: 0;
             left: 0;
@@ -71,19 +71,12 @@
         }
         
         #character-select-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
             display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-            box-sizing: border-box;
-            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        
+        #game-over {
+            display: none;
         }
         
         .character-grid {
@@ -94,7 +87,6 @@
             max-width: 300px;
         }
         
-        /* Stile per il titolo della schermata di selezione personaggio */
         #character-select-screen h1 {
             font-size: 28px;
             text-align: center;
@@ -134,22 +126,6 @@
             object-fit: contain;
         }
         
-        #game-over {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-            box-sizing: border-box;
-            padding: 20px;
-        }
-        
         h1 {
             color: #fff;
             font-size: 36px;
@@ -177,19 +153,17 @@
             background-color: #45a049;
         }
         
-        /* Stile per il pulsante Spotify */
         #spotify-button {
-            background-color: #1DB954; /* Colore verde di Spotify */
+            background-color: #1DB954;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         
         #spotify-button:hover {
-            background-color: #1AA34A; /* Verde leggermente più scuro per l'hover */
+            background-color: #1AA34A;
         }
         
-        /* Stile per il controllo audio */
         #audio-controls {
             position: absolute;
             bottom: 10px;
@@ -216,6 +190,17 @@
         #audio-toggle:hover {
             background-color: rgba(0, 0, 0, 0.7);
         }
+        
+        #environment-indicator {
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+            z-index: 5;
+        }
     </style>
 </head>
 <body>
@@ -239,29 +224,12 @@
                 <div class="character-item" data-character="1">
                     <img src="elvio_1.png" alt="Personaggio 2">
                 </div>
+                <!-- Altri personaggi ridotti per alleggerire la pagina su mobile -->
                 <div class="character-item" data-character="2">
                     <img src="elvio_1.png" alt="Personaggio 3">
                 </div>
                 <div class="character-item" data-character="3">
                     <img src="elvio_1.png" alt="Personaggio 4">
-                </div>
-                <div class="character-item" data-character="4">
-                    <img src="elvio_1.png" alt="Personaggio 5">
-                </div>
-                <div class="character-item" data-character="5">
-                    <img src="elvio_1.png" alt="Personaggio 6">
-                </div>
-                <div class="character-item" data-character="6">
-                    <img src="elvio_1.png" alt="Personaggio 7">
-                </div>
-                <div class="character-item" data-character="7">
-                    <img src="elvio_1.png" alt="Personaggio 8">
-                </div>
-                <div class="character-item" data-character="8">
-                    <img src="elvio_1.png" alt="Personaggio 9">
-                </div>
-                <div class="character-item" data-character="9">
-                    <img src="elvio_1.png" alt="Personaggio 10">
                 </div>
             </div>
             <button id="back-button">Indietro</button>
@@ -277,6 +245,8 @@
         <div id="audio-controls">
             <button id="audio-toggle">🔊</button>
         </div>
+        
+        <div id="environment-indicator"></div>
     </div>
 
     <!-- Elemento audio per la colonna sonora -->
@@ -286,47 +256,20 @@
     </audio>
 
     <script>
-        // Funzione per dimensionare il canvas in base allo schermo
-        function resizeGame() {
-            const container = document.getElementById('game-container');
-            const canvas = document.getElementById('game-canvas');
-            
-            // Ottiene le dimensioni della finestra
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-            
-            // Mantiene il rapporto d'aspetto 9:16 (verticale)
-            const aspectRatio = 9/16;
-            
-            let newWidth, newHeight;
-            
-            if (windowWidth / windowHeight < aspectRatio) {
-                // Se lo schermo è più stretto rispetto al rapporto d'aspetto
-                newWidth = windowWidth * 0.95;
-                newHeight = newWidth / aspectRatio;
-            } else {
-                // Se lo schermo è più largo rispetto al rapporto d'aspetto
-                newHeight = windowHeight * 0.95;
-                newWidth = newHeight * aspectRatio;
+        // Sistema di ambientazioni migliorato
+        const environments = [
+            { 
+                name: "Bari", 
+                background: "bg1.png"
+            },
+            { 
+                name: "Lungomare", 
+                background: "bg2.png"
             }
-            
-            // Imposta le dimensioni del canvas
-            canvas.style.width = `${newWidth}px`;
-            canvas.style.height = `${newHeight}px`;
-            
-            // Leggera ottimizzazione per iOS - non invasiva
-            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                canvas.style.willChange = 'transform';
-            }
-        }
+            // Puoi aggiungere altri ambienti qui
+        ];
 
-        // Ridimensiona il gioco all'avvio
-        window.addEventListener('load', resizeGame);
-        
-        // Ridimensiona il gioco quando la finestra cambia dimensione
-        window.addEventListener('resize', resizeGame);
-        
-        // Ottenimento degli elementi DOM
+        // Elementi DOM
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
         const startScreen = document.getElementById('start-screen');
@@ -336,22 +279,40 @@
         const homeButton = document.getElementById('home-button');
         const finalScoreElement = document.getElementById('final-score');
         const spotifyButton = document.getElementById('spotify-button');
-        
-        // Elementi audio
+        const environmentIndicator = document.getElementById('environment-indicator');
         const soundtrack = document.getElementById('soundtrack');
         const audioToggle = document.getElementById('audio-toggle');
-        let audioEnabled = true;
-        
-        // Riferimenti agli elementi della selezione personaggi
         const characterSelectScreen = document.getElementById('character-select-screen');
         const characterSelectButton = document.getElementById('character-select-button');
         const backButton = document.getElementById('back-button');
         const characterItems = document.querySelectorAll('.character-item');
         
-        // Variabile per tenere traccia del personaggio selezionato
+        // Variabili di stato
+        let audioEnabled = true;
         let selectedCharacter = 0;
+        let gameStarted = false;
+        let gameOver = false;
+        let score = 0;
+        let frames = 0;
+        let fadeAudioInterval = null;
+        let lastTime = 0;
+        let lastFrameTime = 0;
+        let pipeCounter = 0;
         
-        // Configurazione dei personaggi (NUOVO)
+        // Costanti del gioco
+        const GRAVITY = 0.25;
+        const FLAP_SPEED = -8;
+        const PIPE_SPEED = 2;
+        const PIPE_GAP = 300;
+        const PIPE_WIDTH = 60;
+        const FPS = 60;
+        const frameTime = 1000 / FPS;
+        const pipeInterval = 200;
+        
+        // Cache per le immagini di sfondo
+        const backgroundImages = {};
+        
+        // Configurazione personaggi
         const characters = [
             { 
                 name: "Niko",
@@ -365,179 +326,235 @@
             }
         ];
         
-        // Event listener per il pulsante di selezione personaggio
-        characterSelectButton.addEventListener('click', function() {
-            startScreen.style.display = 'none';
-            characterSelectScreen.style.display = 'flex';
-        });
-        
-        // Event listener per il pulsante "Indietro"
-        backButton.addEventListener('click', function() {
-            characterSelectScreen.style.display = 'none';
-            startScreen.style.display = 'flex';
-        });
-        
-        // Event listener per i personaggi selezionabili
-        characterItems.forEach(item => {
-            item.addEventListener('click', function() {
-                // Rimuovi la classe 'selected' da tutti gli elementi
-                characterItems.forEach(el => el.classList.remove('selected'));
-                
-                // Aggiungi la classe 'selected' all'elemento cliccato
-                this.classList.add('selected');
-                
-                // Aggiorna il personaggio selezionato
-                selectedCharacter = parseInt(this.getAttribute('data-character'));
-                console.log('Personaggio selezionato:', selectedCharacter);
-                
-                // Carica le immagini del personaggio selezionato
-                loadCharacterImages();
-            });
-        });
-        
-        // Funzione per caricare le immagini del personaggio selezionato (NUOVO)
-        function loadCharacterImages() {
-            // Determina quale personaggio usare (Niko o Elvio)
-            // Se il personaggio selezionato è 0, usa Niko, altrimenti usa Elvio
-            const characterIndex = selectedCharacter === 0 ? 0 : 1;
-            
-            // Carica le immagini
-            birdImage1.src = characters[characterIndex].baseImage;
-            birdImage2.src = characters[characterIndex].jumpImage;
-            
-            console.log(`Caricando immagini per ${characters[characterIndex].name}:`, 
-                        characters[characterIndex].baseImage, 
-                        characters[characterIndex].jumpImage);
-        }
-        
-        // Event listener per il pulsante Spotify
-        spotifyButton.addEventListener('click', function() {
-            window.open('https://open.spotify.com/artist/7wsOlF3P2t6BB1ali9W1t1?si=bQuFkTYrQsmO42ZqxtTqXA', '_blank');
-        });
-        
-        // Precarica l'audio per migliorare la reattività
-        window.addEventListener('load', function() {
-            // Precarica l'audio silenziosamente (senza riprodurlo)
-            soundtrack.load();
-            soundtrack.volume = 1.0;
-            console.log("Audio precaricato");
-        });
-        
-        // Gestione audio
-        function toggleAudio() {
-            if (audioEnabled) {
-                // Se attualmente abilitato, disabilita
-                soundtrack.pause();
-                audioToggle.textContent = '🔇';
-            } else {
-                // Se attualmente disabilitato, abilita
-                if (gameStarted && !gameOver) {
-                    soundtrack.volume = 1.0; // Assicurati che il volume sia al massimo
-                    soundtrack.play().catch(e => console.error("Errore durante la riproduzione audio:", e));
-                }
-                audioToggle.textContent = '🔊';
-            }
-            audioEnabled = !audioEnabled;
-        }
-        
-        audioToggle.addEventListener('click', toggleAudio);
-        
-        // Costanti del gioco
-        const GRAVITY = 0.25;
-        const FLAP_SPEED = -8;     // Aumentato per salti più ampi
-        const PIPE_SPEED = 2;
-        const PIPE_GAP = 300;      // Aumentato da 225 a 300 (circa un terzo in più)
-        const PIPE_WIDTH = 60;
-        
-        // Variabili per il controllo del tempo
-        let lastTime = 0;
-        const FPS = 60;
-        const frameTime = 1000 / FPS;
-        let pipeCounter = 0;
-        let pipeInterval = 200;    // Intervallo tra i tubi (valore più alto = tubi più distanti)
-        
-        // Variabili di stato del gioco
-        let gameStarted = false;
-        let gameOver = false;
-        let score = 0;
-        let frames = 0;
-        let bgX = 0; // Posizione X dello sfondo
-        
-        // Caricamento delle immagini
-        const bgImage = new Image();
-        let bgImageLoaded = false;
-        bgImage.onload = function() {
-            bgImageLoaded = true;
-            console.log("Immagine di sfondo caricata con successo");
-        };
-        bgImage.onerror = function() {
-            console.error("Impossibile caricare l'immagine di sfondo");
-            bgImageLoaded = false;
-            // Lo sfondo sarà nero come definito nella funzione drawBackground
-        };
-        bgImage.src = 'bg1.png';
-        
-        // Caricamento delle immagini del personaggio
-        const birdImage1 = new Image(); // Immagine per la discesa
-        const birdImage2 = new Image(); // Immagine per la salita
+        // Caricamento immagini personaggio
+        const birdImage1 = new Image();
+        const birdImage2 = new Image();
         let birdImage1Loaded = false;
         let birdImage2Loaded = false;
-        let birdImageRatio = 1; // Rapporto altezza/larghezza dell'immagine
+        let birdImageRatio = 1;
         
-        birdImage1.onload = function() {
-            birdImage1Loaded = true;
-            birdImageRatio = birdImage1.height / birdImage1.width;
-            console.log("Immagine del personaggio (discesa) caricata con successo", birdImage1.width, birdImage1.height);
+        // Classe BackgroundLayer per gestire i singoli layer di sfondo
+        class BackgroundLayer {
+            constructor(imageSrc, x, width, height) {
+                this.image = backgroundImages[imageSrc] || new Image();
+                if (!backgroundImages[imageSrc]) {
+                    this.image.src = imageSrc;
+                    backgroundImages[imageSrc] = this.image;
+                }
+                this.x = x;
+                this.width = width;
+                this.height = height;
+            }
             
-            // Aggiorna le dimensioni dell'uccello in base all'immagine caricata
-            bird.width = 50; // Larghezza fissa
-            bird.height = bird.width * birdImageRatio; // Altezza proporzionale
-        };
+            update(speed) {
+                this.x -= speed;
+            }
+            
+            draw(ctx) {
+                if (this.image.complete) {
+                    ctx.drawImage(this.image, this.x, 0, this.width, this.height);
+                } else {
+                    // Fallback se l'immagine non è caricata
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.fillRect(this.x, 0, this.width, this.height);
+                }
+            }
+        }
+
+        // Gestore principale degli sfondi
+        class BackgroundManager {
+            constructor(canvasWidth, canvasHeight) {
+                this.layers = [];
+                this.canvasWidth = canvasWidth;
+                this.canvasHeight = canvasHeight;
+                this.currentEnvironmentIndex = 0;
+                this.totalDistance = 0;
+                this.environmentChangeDistance = 2000; // Distanza dopo la quale cambiare ambiente
+                
+                // Inizializza i primi due layer con l'ambiente iniziale
+                this.addInitialLayers();
+            }
+            
+            addInitialLayers() {
+                const currentEnv = environments[this.currentEnvironmentIndex];
+                // Aggiungi due layer iniziali per coprire lo schermo
+                this.layers.push(new BackgroundLayer(
+                    currentEnv.background, 
+                    0, 
+                    this.canvasWidth, 
+                    this.canvasHeight
+                ));
+                
+                this.layers.push(new BackgroundLayer(
+                    currentEnv.background, 
+                    this.canvasWidth, 
+                    this.canvasWidth, 
+                    this.canvasHeight
+                ));
+            }
+            
+            update(speed) {
+                if (!gameStarted || gameOver) return;
+                
+                // Aggiorna la distanza totale percorsa
+                this.totalDistance += speed;
+                
+                // Controlla se è il momento di cambiare ambiente
+                if (this.totalDistance >= this.environmentChangeDistance) {
+                    this.currentEnvironmentIndex = (this.currentEnvironmentIndex + 1) % environments.length;
+                    this.totalDistance = 0;
+                    
+                    // Aggiorna l'indicatore di ambiente
+                    if (environmentIndicator) {
+                        environmentIndicator.textContent = environments[this.currentEnvironmentIndex].name;
+                    }
+                }
+                
+                // Aggiorna la posizione di tutti i layer
+                for (let i = 0; i < this.layers.length; i++) {
+                    this.layers[i].update(speed);
+                }
+                
+                // Controlla se un layer è uscito completamente dallo schermo
+                if (this.layers[0] && this.layers[0].x + this.layers[0].width <= 0) {
+                    // Rimuovi il layer uscito dallo schermo
+                    this.layers.shift();
+                    
+                    // Aggiungi un nuovo layer alla fine
+                    const currentEnv = environments[this.currentEnvironmentIndex];
+                    const lastLayer = this.layers[this.layers.length - 1];
+                    
+                    this.layers.push(new BackgroundLayer(
+                        currentEnv.background,
+                        lastLayer.x + lastLayer.width,
+                        this.canvasWidth,
+                        this.canvasHeight
+                    ));
+                }
+                
+                // Assicurati di avere sempre almeno 2 layer
+                if (this.layers.length < 2) {
+                    const currentEnv = environments[this.currentEnvironmentIndex];
+                    const lastLayer = this.layers[this.layers.length - 1];
+                    
+                    this.layers.push(new BackgroundLayer(
+                        currentEnv.background,
+                        lastLayer.x + lastLayer.width,
+                        this.canvasWidth,
+                        this.canvasHeight
+                    ));
+                }
+            }
+            
+            draw(ctx) {
+                // Disegna tutti i layer di sfondo
+                for (let i = 0; i < this.layers.length; i++) {
+                    this.layers[i].draw(ctx);
+                }
+            }
+            
+            reset() {
+                // Reset quando il gioco riparte
+                this.layers = [];
+                this.currentEnvironmentIndex = 0;
+                this.totalDistance = 0;
+                
+                // Ricrea i layer iniziali
+                this.addInitialLayers();
+                
+                // Aggiorna l'indicatore di ambiente
+                if (environmentIndicator) {
+                    environmentIndicator.textContent = environments[this.currentEnvironmentIndex].name;
+                }
+            }
+        }
+
+        // Istanza globale del gestore sfondi
+        let backgroundManager;
         
-        birdImage1.onerror = function() {
-            console.error("Impossibile caricare l'immagine del personaggio (discesa)");
-            birdImage1Loaded = false;
-        };
+        // Dimensione del canvas
+        function resizeGame() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const aspectRatio = 9/16;
+            
+            let newWidth, newHeight;
+            
+            if (windowWidth / windowHeight < aspectRatio) {
+                newWidth = windowWidth * 0.95;
+                newHeight = newWidth / aspectRatio;
+            } else {
+                newHeight = windowHeight * 0.95;
+                newWidth = newHeight * aspectRatio;
+            }
+            
+            canvas.style.width = `${newWidth}px`;
+            canvas.style.height = `${newHeight}px`;
+            
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                canvas.style.willChange = 'transform';
+            }
+        }
         
-        birdImage2.onload = function() {
-            birdImage2Loaded = true;
-            console.log("Immagine del personaggio (salita) caricata con successo", birdImage2.width, birdImage2.height);
-        };
+        // Precarica immagini di sfondo
+        function preloadBackgroundImages() {
+            for (let i = 0; i < environments.length; i++) {
+                const img = new Image();
+                img.src = environments[i].background;
+                backgroundImages[environments[i].background] = img;
+            }
+        }
         
-        birdImage2.onerror = function() {
-            console.error("Impossibile caricare l'immagine del personaggio (salita)");
-            birdImage2Loaded = false;
-        };
+        // Caricamento immagini personaggio
+        function loadCharacterImages() {
+            const characterIndex = selectedCharacter === 0 ? 0 : 1;
+            
+            // Libera memoria prima di caricare nuove immagini
+            if (birdImage1Loaded) {
+                birdImage1.src = "";
+            }
+            if (birdImage2Loaded) {
+                birdImage2.src = "";
+            }
+            
+            birdImage1.onload = function() {
+                birdImage1Loaded = true;
+                birdImageRatio = birdImage1.height / birdImage1.width;
+                bird.width = 50;
+                bird.height = bird.width * birdImageRatio;
+            };
+            
+            birdImage2.onload = function() {
+                birdImage2Loaded = true;
+            };
+            
+            birdImage1.src = characters[characterIndex].baseImage;
+            birdImage2.src = characters[characterIndex].jumpImage;
+        }
+
+        // Rileva dispositivi mobili per ottimizzazioni
+        function optimizeForMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
         
-        // Carica inizialmente le immagini di Niko (visto che è il personaggio selezionato di default)
-        birdImage1.src = 'niko_1.png'; // Immagine per la discesa
-        birdImage2.src = 'niko_2.png'; // Immagine per la salita
-        
-        // Oggetto uccello (protagonista)
+        // Oggetto uccello
         const bird = {
             x: 50,
             y: canvas.height / 2,
-            width: 50,  // Larghezza base che verrà aggiornata dopo il caricamento dell'immagine
-            height: 50, // Altezza iniziale che verrà aggiornata per mantenere le proporzioni
+            width: 50,
+            height: 50,
             velocity: 0,
             
             draw() {
-                // Determina quale immagine usare in base alla velocità (salita o discesa)
                 const isRising = this.velocity < 0;
                 const currentImage = isRising ? birdImage2 : birdImage1;
                 const imageLoaded = isRising ? birdImage2Loaded : birdImage1Loaded;
                 
                 if (imageLoaded) {
-                    // Disegna l'immagine del personaggio appropriata (niko_1.png/niko_2.png o elvio_1.png/elvio_2.png)
                     ctx.save();
                     ctx.translate(this.x, this.y);
-                    
-                    // Ruota leggermente l'immagine in base alla velocità (per effetto di volo)
-                    // Il fattore 0.02 invece di 0.05 riduce l'inclinazione di circa il 60%
                     const rotation = this.velocity * 0.02;
                     ctx.rotate(rotation);
-                    
-                    // Disegna l'immagine centrata mantenendo le proporzioni originali
                     ctx.drawImage(
                         currentImage, 
                         -this.width / 2, 
@@ -547,7 +564,6 @@
                     );
                     ctx.restore();
                 } else {
-                    // Se l'immagine non è caricata, disegna un cerchio nero
                     ctx.fillStyle = '#000000';
                     ctx.beginPath();
                     ctx.arc(this.x, this.y, this.width / 3, 0, Math.PI * 2);
@@ -560,7 +576,6 @@
                     this.velocity += GRAVITY * dt;
                     this.y += this.velocity * dt;
                     
-                    // Controllo collisione con i bordi
                     if (this.y - this.height / 2 <= 0) {
                         this.y = this.height / 2;
                         this.velocity = 0;
@@ -588,14 +603,13 @@
         
         // Array di tubi
         const pipes = [];
+        const MAX_PIPES = 10;
         
-        // Classe per i tubi
         class Pipe {
             constructor() {
                 this.x = canvas.width;
                 this.passed = false;
                 
-                // Posizione casuale dell'apertura
                 const minHeight = 50;
                 const maxHeight = canvas.height - PIPE_GAP - minHeight;
                 this.topHeight = Math.floor(Math.random() * (maxHeight - minHeight) + minHeight);
@@ -604,34 +618,28 @@
             }
             
             draw() {
-                // Tubo superiore
-                ctx.fillStyle = '#4CAF50';
-                ctx.fillRect(this.x, 0, PIPE_WIDTH, this.topHeight);
-                
-                // Parte inferiore del tubo superiore
-                ctx.fillStyle = '#3E8E41';
-                ctx.fillRect(this.x - 5, this.topHeight - 20, PIPE_WIDTH + 10, 20);
-                
-                // Tubo inferiore
-                ctx.fillStyle = '#4CAF50';
-                ctx.fillRect(this.x, this.bottomY, PIPE_WIDTH, this.bottomHeight);
-                
-                // Parte superiore del tubo inferiore
-                ctx.fillStyle = '#3E8E41';
-                ctx.fillRect(this.x - 5, this.bottomY, PIPE_WIDTH + 10, 20);
+                // Ottimizzazione: non disegnare tubi fuori dallo schermo
+                if (this.x > -PIPE_WIDTH && this.x < canvas.width + PIPE_WIDTH) {
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(this.x, 0, PIPE_WIDTH, this.topHeight);
+                    ctx.fillStyle = '#3E8E41';
+                    ctx.fillRect(this.x - 5, this.topHeight - 20, PIPE_WIDTH + 10, 20);
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(this.x, this.bottomY, PIPE_WIDTH, this.bottomHeight);
+                    ctx.fillStyle = '#3E8E41';
+                    ctx.fillRect(this.x - 5, this.bottomY, PIPE_WIDTH + 10, 20);
+                }
             }
             
             update(dt) {
                 if (gameStarted && !gameOver) {
                     this.x -= PIPE_SPEED * dt;
                     
-                    // Controllo se l'uccello è passato attraverso il tubo
                     if (!this.passed && this.x + PIPE_WIDTH < bird.x) {
                         this.passed = true;
                         score++;
                     }
                     
-                    // Controllo collisione
                     if (this.checkCollision()) {
                         endGame();
                     }
@@ -639,17 +647,19 @@
             }
             
             checkCollision() {
-                // Calcolo dei bordi dell'uccello
+                // Ottimizzazione: controlla collisione solo se il tubo è vicino all'uccello
+                if (Math.abs(this.x - bird.x) > bird.width + PIPE_WIDTH) {
+                    return false;
+                }
+                
                 const birdLeft = bird.x - bird.width / 2;
                 const birdRight = bird.x + bird.width / 2;
                 const birdTop = bird.y - bird.height / 2;
                 const birdBottom = bird.y + bird.height / 2;
                 
-                // Calcolo dei bordi del tubo
                 const pipeLeft = this.x;
                 const pipeRight = this.x + PIPE_WIDTH;
                 
-                // Controllo collisione
                 if (
                     birdRight > pipeLeft && 
                     birdLeft < pipeRight && 
@@ -662,83 +672,61 @@
             }
         }
         
-        // Funzione di disegno dello sfondo
-        function drawBackground() {
-            // Disegna l'immagine di sfondo se caricata
-            if (bgImageLoaded) {
-                // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
-                ctx.drawImage(bgImage, bgX % canvas.width, 0, canvas.width, canvas.height);
-                ctx.drawImage(bgImage, (bgX % canvas.width) + canvas.width, 0, canvas.width, canvas.height);
-                
-                // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
-                if (Math.abs(bgX) >= canvas.width) {
-                    bgX = bgX % canvas.width;
-                }
-            } else {
-                // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
-        }
-        
         // Funzione per disegnare il punteggio
         function drawScore() {
             ctx.fillStyle = '#fff';
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
             ctx.font = '40px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(score.toString(), canvas.width / 2, 50);
-            ctx.strokeText(score.toString(), canvas.width / 2, 50);
         }
         
         // Funzione di aggiornamento principale
         function update(currentTime) {
-            // Calcola il delta time (tempo trascorso dall'ultimo frame)
             if (!lastTime) lastTime = currentTime;
-            const deltaTime = (currentTime - lastTime) / frameTime; // Normalizzato a 60 FPS
+            const deltaTime = (currentTime - lastTime) / frameTime;
             lastTime = currentTime;
             
-            // Limita deltaTime per evitare comportamenti strani quando la tab è in background
+            // Limita deltaTime a 3 frame (importante per mobile)
             const dt = Math.min(deltaTime, 3);
             
-            // Conta i frame normalizzati per la generazione dei tubi
+            // Velocità di scorrimento ottimizzata per mobile
+            const scrollSpeed = optimizeForMobile() ? 1.2 : 2;
+            
+            // Aggiorna lo sfondo
+            backgroundManager.update(scrollSpeed * dt);
+            
+            // Genera tubi con limitazione quantità
             if (gameStarted && !gameOver) {
                 pipeCounter += dt;
-                if (pipeCounter >= pipeInterval) { // Genera un tubo ogni pipeInterval frame normalizzati
+                if (pipeCounter >= pipeInterval && pipes.length < MAX_PIPES) {
                     pipes.push(new Pipe());
                     pipeCounter = 0;
                 }
             }
             
-            // Aggiorna l'uccello con il delta time
+            // Aggiorna l'uccello
             bird.update(dt);
             
-            // Aggiorna i tubi e rimuovi quelli fuori dallo schermo
+            // Aggiorna i tubi - ottimizzato con un solo ciclo
             for (let i = pipes.length - 1; i >= 0; i--) {
                 pipes[i].update(dt);
                 
-                if (pipes[i].x + PIPE_WIDTH < 0) {
+                // Rimuovi tubi fuori schermo
+                if (pipes[i].x + PIPE_WIDTH < -100) {
                     pipes.splice(i, 1);
                 }
             }
             
-            // Aggiorna lo sfondo in base al tempo
-            if (gameStarted && !gameOver) {
-                bgX -= 1.5 * dt; // Velocità aumentata da 0.5 a 1.5 (triplicata)
-            }
-            
-            // Incrementa il contatore dei frame
+            // Incrementa i frame
             frames++;
         }
         
         // Funzione di disegno principale
         function draw() {
-            // Pulisci il canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             // Disegna lo sfondo
-            drawBackground();
+            backgroundManager.draw(ctx);
             
             // Disegna i tubi
             pipes.forEach(pipe => pipe.draw());
@@ -752,62 +740,83 @@
             }
         }
         
-        // Funzione di gioco principale
-        let lastFrameTime = 0;
-        
+        // Game loop ottimizzato per mobile
         function gameLoop(currentTime) {
-            // Calcola il tempo trascorso dall'ultimo frame (più stabile)
             if (lastFrameTime === 0) {
                 lastFrameTime = currentTime;
             }
             
-            // Limita FPS su iPad per migliorare la stabilità
+            const isMobile = optimizeForMobile();
+            
+            // Limita framerate in base al dispositivo
+            const minFrameTime = isMobile ? 24 : 16; // ~42 FPS su mobile, ~60 FPS su desktop
             const elapsed = currentTime - lastFrameTime;
-            if (/iPad/.test(navigator.userAgent) && elapsed < 16) { // circa 60 FPS
+            
+            if (elapsed < minFrameTime) {
                 requestAnimationFrame(gameLoop);
                 return;
             }
             
             lastFrameTime = currentTime;
             
-            update(currentTime);
-            draw();
+            // Limita aggiornamenti su mobile
+            if (isMobile && frames % 2 !== 0) {
+                // Su mobile, aggiorna solo un frame su due
+                draw(); // Mantieni il disegno per fluidità visiva
+            } else {
+                // Aggiornamento completo
+                update(currentTime);
+                draw();
+            }
+            
+            // Pulizia memoria non utilizzata
+            if (pipes.length > MAX_PIPES) {
+                pipes.splice(0, pipes.length - MAX_PIPES);
+            }
+            
             requestAnimationFrame(gameLoop);
         }
         
-        // Variabile per tenere traccia dell'intervallo di fade audio
-        let fadeAudioInterval = null;
+        // Audio toggle
+        function toggleAudio() {
+            if (audioEnabled) {
+                soundtrack.pause();
+                audioToggle.textContent = '🔇';
+            } else {
+                if (gameStarted && !gameOver) {
+                    soundtrack.volume = 1.0;
+                    try {
+                        soundtrack.play();
+                    } catch(e) {
+                        console.error("Errore audio:", e);
+                    }
+                }
+                audioToggle.textContent = '🔊';
+            }
+            audioEnabled = !audioEnabled;
+        }
         
-        // Funzione per terminare il gioco
+        // Funzione Game Over
         function endGame() {
             gameOver = true;
             finalScoreElement.textContent = `Punteggio: ${score}`;
             gameOverScreen.style.display = 'flex';
+            environmentIndicator.textContent = '';
             
-            // Ferma la musica quando il gioco termina o riduci il volume gradualmente
             if (audioEnabled) {
-                // Ferma qualsiasi fade in corso se c'è
                 if (fadeAudioInterval) {
                     clearInterval(fadeAudioInterval);
                 }
                 
-                // Sfuma gradualmente il volume (fade out)
-                let volume = soundtrack.volume;
-                fadeAudioInterval = setInterval(function() {
-                    if (volume > 0.1) {
-                        volume -= 0.1;
-                        soundtrack.volume = volume;
-                    } else {
-                        clearInterval(fadeAudioInterval);
-                        fadeAudioInterval = null;
-                        soundtrack.pause();
-                        soundtrack.volume = 1.0; // Ripristina il volume per la prossima partita
-                    }
-                }, 100);
+                try {
+                    soundtrack.pause();
+                } catch(e) {
+                    console.error("Errore audio:", e);
+                }
             }
         }
         
-        // Funzione per iniziare il gioco
+        // Funzione Start Game
         function startGame() {
             startScreen.style.display = 'none';
             gameStarted = true;
@@ -815,104 +824,146 @@
             score = 0;
             frames = 0;
             pipeCounter = 0;
-            bgX = 0; // Resetta la posizione dello sfondo
+            
+            // Reset sfondo
+            if (backgroundManager) {
+                backgroundManager.reset();
+            }
+            
+            environmentIndicator.textContent = environments[0].name;
+            
             bird.reset();
             pipes.length = 0;  // Svuota l'array dei tubi
-            lastTime = 0;      // Resetta il tempo dell'ultimo frame
+            lastTime = 0;
             
-            // Avvia la musica quando il gioco inizia (solo se l'audio è abilitato)
             if (audioEnabled) {
-                // Ferma l'audio prima se sta ancora riproducendo
-                soundtrack.pause();
-                soundtrack.currentTime = 0; // Riavvia dall'inizio
-                soundtrack.volume = 1.0;    // Assicurati che il volume sia al massimo
-                
-                // Piccolo timeout per assicurarsi che tutti i cambiamenti audio siano applicati
-                setTimeout(() => {
-                    soundtrack.play().catch(e => {
-                        console.error("Errore durante la riproduzione audio:", e);
-                        // In alcuni browser, l'audio può essere riprodotto solo dopo un'interazione dell'utente
-                        // Poiché stiamo già rispondendo a un'interazione (click sul pulsante Start), 
-                        // questo non dovrebbe essere un problema, ma gestiamo comunque l'errore
-                    });
-                }, 50);
+                try {
+                    soundtrack.currentTime = 0;
+                    soundtrack.volume = 1.0;
+                    setTimeout(() => {
+                        soundtrack.play().catch(() => {
+                            // Gestione fallback silenziosa
+                        });
+                    }, 50);
+                } catch(e) {
+                    console.error("Errore audio:", e);
+                }
             }
         }
         
-        // Funzione per tornare alla schermata home
+        // Funzione Home
         function goHome() {
-            // Arresta immediatamente qualsiasi fade out in corso
             if (fadeAudioInterval) {
                 clearInterval(fadeAudioInterval);
                 fadeAudioInterval = null;
-                soundtrack.volume = 1.0; // Ripristina subito il volume al massimo
             }
             
-            // Ferma la musica
-            soundtrack.pause();
-            soundtrack.currentTime = 0;
+            try {
+                soundtrack.pause();
+                soundtrack.currentTime = 0;
+            } catch(e) {
+                console.error("Errore audio:", e);
+            }
             
-            // Nasconde la schermata di game over
             gameOverScreen.style.display = 'none';
-            
-            // Resetta i parametri di gioco
             gameStarted = false;
             gameOver = false;
             score = 0;
             pipes.length = 0;
             bird.reset();
-            
-            // Mostra la schermata iniziale
+            environmentIndicator.textContent = '';
             startScreen.style.display = 'flex';
         }
         
-        // Funzione per ricominciare il gioco
+        // Funzione Restart
         function restartGame() {
-            // Arresta immediatamente qualsiasi fade out in corso
             if (fadeAudioInterval) {
                 clearInterval(fadeAudioInterval);
                 fadeAudioInterval = null;
-                soundtrack.volume = 1.0; // Ripristina subito il volume al massimo
             }
             
             gameOverScreen.style.display = 'none';
             startGame();
         }
         
-        // Event listeners
-        startButton.addEventListener('click', startGame);
-        restartButton.addEventListener('click', restartGame);
-        homeButton.addEventListener('click', goHome);
-        
-        // Event listener per il salto dell'uccello
-        document.addEventListener('keydown', function(e) {
-            if (e.code === 'Space' || e.key === ' ') {
+        // Inizializzazione
+        window.addEventListener('load', function() {
+            resizeGame();
+            preloadBackgroundImages();
+            
+            // Inizializza il gestore degli sfondi
+            backgroundManager = new BackgroundManager(canvas.width, canvas.height);
+            
+            soundtrack.load();
+            soundtrack.volume = 1.0;
+            
+            // Assegna event listeners
+            startButton.addEventListener('click', startGame);
+            restartButton.addEventListener('click', restartGame);
+            homeButton.addEventListener('click', goHome);
+            audioToggle.addEventListener('click', toggleAudio);
+            
+            characterSelectButton.addEventListener('click', function() {
+                startScreen.style.display = 'none';
+                characterSelectScreen.style.display = 'flex';
+            });
+            
+            backButton.addEventListener('click', function() {
+                characterSelectScreen.style.display = 'none';
+                startScreen.style.display = 'flex';
+            });
+            
+            characterItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    characterItems.forEach(el => el.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedCharacter = parseInt(this.getAttribute('data-character'));
+                    loadCharacterImages();
+                });
+            });
+            
+            // Gestione degli eventi di gioco
+            document.addEventListener('keydown', function(e) {
+                if (e.code === 'Space' || e.key === ' ') {
+                    if (!gameStarted) {
+                        startGame();
+                    }
+                    bird.flap();
+                    e.preventDefault();
+                }
+            });
+            
+            // Ottimizzazione tocco mobile
+            canvas.addEventListener('touchstart', function(e) {
+                e.preventDefault();
                 if (!gameStarted) {
                     startGame();
+                } else {
+                    bird.flap();
                 }
-                bird.flap();
-                e.preventDefault(); // Previene lo scroll della pagina con la barra spaziatrice
-            }
+            }, { passive: false });
+            
+            canvas.addEventListener('click', function() {
+                if (!gameStarted) {
+                    startGame();
+                } else {
+                    bird.flap();
+                }
+            });
+            
+            // Gestione bottone Spotify
+            spotifyButton.addEventListener('click', function() {
+                window.open('https://open.spotify.com', '_blank');
+            });
+            
+            // Inizializza il primo personaggio
+            loadCharacterImages();
+            
+            // Avvia il game loop
+            requestAnimationFrame(gameLoop);
         });
         
-        // Event listener per il tocco su mobile
-        canvas.addEventListener('touchstart', function(e) {
-            e.preventDefault(); // Previene lo zoom o altre azioni del browser
-            if (!gameStarted) {
-                startGame();
-            }
-            bird.flap();
-        }, { passive: false });
-        
-        canvas.addEventListener('click', function(e) {
-            if (!gameStarted) {
-                startGame();
-            }
-            bird.flap();
-        });
-        
-        // Avvia il game loop con il timestamp corrente
-        requestAnimationFrame(gameLoop);
+        window.addEventListener('resize', resizeGame);
     </script>
 </body>
 </html>
