@@ -170,7 +170,7 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            margin: 5px;
+            margin: 5px; /* Manteniamo un margine uniforme di 5px per tutti i pulsanti */
         }
         
         button:hover {
@@ -179,14 +179,17 @@
         
         /* Stile per il pulsante Spotify */
         #spotify-button {
-            background-color: #1DB954; /* Colore verde di Spotify */
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 720px;  /* Larghezza 3 volte più grande (240px × 3) */
+            height: 150px; /* Altezza 3 volte più grande (50px × 3) */
+            padding: 0;    /* Rimuoviamo il padding per l'immagine */
+            background-color: transparent; /* Sfondo trasparente */
+            margin: 5px;   /* Margine uniforme uguale agli altri pulsanti */
         }
         
-        #spotify-button:hover {
-            background-color: #1AA34A; /* Verde leggermente più scuro per l'hover */
+        #spotify-button img {
+            width: 100%;   /* L'immagine riempie il pulsante */
+            height: 100%;  /* L'immagine riempie il pulsante */
+            object-fit: contain; /* Mantiene le proporzioni */
         }
         
         /* Stile per il controllo audio */
@@ -227,7 +230,7 @@
             <p class="score">Premi per saltare</p>
             <button id="start-button">Inizia</button>
             <button id="character-select-button">Scegli Personaggio</button>
-            <button id="spotify-button">Spotify</button>
+            <button id="spotify-button"><img src="b_spotify.png" alt="Ascolta ONLYOUCAN su Spotify"></button>
         </div>
         
         <div id="character-select-screen">
@@ -462,13 +465,17 @@
         let score = 0;
         let frames = 0;
         let bgX = 0; // Posizione X dello sfondo
+        let bgImageRatio = 16/9; // Rapporto predefinito (verrà aggiornato quando l'immagine è caricata)
         
         // Caricamento delle immagini
         const bgImage = new Image();
         let bgImageLoaded = false;
         bgImage.onload = function() {
             bgImageLoaded = true;
-            console.log("Immagine di sfondo caricata con successo");
+            console.log("Immagine di sfondo caricata con successo", bgImage.width, bgImage.height);
+            // Salva il rapporto d'aspetto originale dell'immagine
+            // Se non ci sono dati sulle dimensioni, usa 16:9 come predefinito
+            bgImageRatio = bgImage.height / bgImage.width || 9/16;
         };
         bgImage.onerror = function() {
             console.error("Impossibile caricare l'immagine di sfondo");
@@ -666,13 +673,38 @@
         function drawBackground() {
             // Disegna l'immagine di sfondo se caricata
             if (bgImageLoaded) {
+                // Calcola le dimensioni per mantenere il rapporto d'aspetto originale dell'immagine
+                let bgWidth, bgHeight, yOffset = 0;
+                
+                // Determinazione delle dimensioni mantenendo il rapporto originale
+                if (canvas.width / canvas.height > bgImageRatio) {
+                    // Se il canvas è più largo rispetto al rapporto dell'immagine
+                    bgWidth = canvas.width;
+                    bgHeight = bgWidth * bgImageRatio;
+                    // Calcola l'offset verticale per centrare l'immagine
+                    yOffset = (canvas.height - bgHeight) / 2;
+                } else {
+                    // Se il canvas è più alto rispetto al rapporto dell'immagine
+                    bgHeight = canvas.height;
+                    bgWidth = bgHeight / bgImageRatio;
+                    // In questo caso non è necessario l'offset verticale
+                    yOffset = 0;
+                }
+                
                 // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
-                ctx.drawImage(bgImage, bgX % canvas.width, 0, canvas.width, canvas.height);
-                ctx.drawImage(bgImage, (bgX % canvas.width) + canvas.width, 0, canvas.width, canvas.height);
+                ctx.drawImage(bgImage, bgX % bgWidth, yOffset, bgWidth, bgHeight);
+                ctx.drawImage(bgImage, (bgX % bgWidth) + bgWidth, yOffset, bgWidth, bgHeight);
                 
                 // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
-                if (Math.abs(bgX) >= canvas.width) {
-                    bgX = bgX % canvas.width;
+                if (Math.abs(bgX) >= bgWidth) {
+                    bgX = bgX % bgWidth;
+                }
+                
+                // Riempie eventuali spazi vuoti sopra o sotto l'immagine con il nero
+                if (yOffset > 0) {
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, canvas.width, yOffset); // Spazio sopra
+                    ctx.fillRect(0, yOffset + bgHeight, canvas.width, yOffset); // Spazio sotto
                 }
             } else {
                 // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
