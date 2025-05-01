@@ -663,50 +663,23 @@
         }
         
         // Funzione di disegno dello sfondo
-       // Funzione di disegno dello sfondo corretta
-function drawBackground() {
-    // Disegna l'immagine di sfondo se caricata
-    if (bgImageLoaded) {
-        // Ottieni le dimensioni del canvas
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        
-        // Calcola le dimensioni proporzionali dell'immagine per coprire tutto il canvas
-        const bgRatio = bgImage.width / bgImage.height;
-        const canvasRatio = canvasWidth / canvasHeight;
-        
-        let drawWidth, drawHeight, offsetX, offsetY;
-        
-        // Se l'immagine è più larga (rispetto all'altezza) del canvas
-        if (bgRatio > canvasRatio) {
-            drawHeight = canvasHeight;
-            drawWidth = drawHeight * bgRatio;
-            offsetX = (canvasWidth - drawWidth) / 2;
-            offsetY = 0;
-        } else {
-            // Se l'immagine è più alta (rispetto alla larghezza) del canvas
-            drawWidth = canvasWidth;
-            drawHeight = drawWidth / bgRatio;
-            offsetX = 0;
-            offsetY = (canvasHeight - drawHeight) / 2;
+        function drawBackground() {
+            // Disegna l'immagine di sfondo se caricata
+            if (bgImageLoaded) {
+                // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
+                ctx.drawImage(bgImage, bgX % canvas.width, 0, canvas.width, canvas.height);
+                ctx.drawImage(bgImage, (bgX % canvas.width) + canvas.width, 0, canvas.width, canvas.height);
+                
+                // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
+                if (Math.abs(bgX) >= canvas.width) {
+                    bgX = bgX % canvas.width;
+                }
+            } else {
+                // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
         }
-        
-        // Disegna l'immagine con parallasse orizzontale
-        ctx.drawImage(bgImage, bgX + offsetX, offsetY, drawWidth, drawHeight);
-        
-        // Disegna una seconda copia dell'immagine per coprire lo spazio quando la prima scorre fuori
-        ctx.drawImage(bgImage, bgX + offsetX + drawWidth, offsetY, drawWidth, drawHeight);
-        
-        // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
-        if (Math.abs(bgX) >= drawWidth) {
-            bgX = bgX % drawWidth;
-        }
-    } else {
-        // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-}
         
         // Funzione per disegnare il punteggio
         function drawScore() {
