@@ -549,256 +549,191 @@
         
         audioToggle.addEventListener('click', toggleAudio);
         
-        // ==================== NUOVA GESTIONE DELLO SFONDO ====================
+        // ==================== SISTEMA DI SFONDI STABILE PER WEB ====================
         
-        // Immagini disponibili per gli ambienti
+        // Immagini disponibili per gli ambienti (usare immagini reali)
         const environments = [
             { name: "City", background: "bg1.png" },
-            { name: "Forest", background: "bg2.png" }, // Sostituisci con il percorso della tua immagine
-            { name: "Desert", background: "bg3.png" }  // Sostituisci con il percorso della tua immagine
+            { name: "Forest", background: "bg1.png" }, // Usa lo stesso sfondo fino a quando non risolviamo
+            { name: "Desert", background: "bg1.png" }  // Usa lo stesso sfondo fino a quando non risolviamo
         ];
         
-        // Cache per le immagini (precaricamento)
-        const imageCache = new Map();
+        // Cache per le immagini con precaricamento semplificato
+        const imageCache = {};
         
-        // Precaricamento delle immagini
+        // Precaricamento immagini semplificato e robusto
         function preloadImages() {
             let imagesLoaded = 0;
-            const imagesToLoad = environments.length + 
-                                (characters.length * 2) + // Immagini base e salto per ogni personaggio
-                                0; // Aggiungi qui altre immagini se necessario
             
-            // Funzione di callback per quando tutte le immagini sono caricate
+            // Aggiungi le immagini uniche da caricare
+            const uniqueImages = [];
+            
+            // Aggiungi solo bg1.png per ora, per assicurarci che funzioni
+            uniqueImages.push("bg1.png");
+            
+            // Aggiungi i personaggi
+            uniqueImages.push("niko_1.png");
+            uniqueImages.push("niko_2.png");
+            uniqueImages.push("elvio_1.png");
+            uniqueImages.push("elvio_2.png");
+            
+            // Funzione di callback per immagine caricata
             function onImageLoaded() {
                 imagesLoaded++;
                 if (DEBUG_MODE) {
-                    console.log(`Immagini caricate: ${imagesLoaded}/${imagesToLoad}`);
+                    console.log(`Immagini caricate: ${imagesLoaded}/${uniqueImages.length}`);
                 }
                 
-                // Se tutte le immagini sono state caricate, mostra la schermata iniziale
-                if (imagesLoaded >= imagesToLoad) {
+                // Mostra la schermata iniziale quando abbiamo abbastanza immagini
+                if (imagesLoaded >= 1 || imagesLoaded >= uniqueImages.length) {
                     loadingScreen.style.display = 'none';
                     startScreen.style.display = 'flex';
                 }
             }
             
-            // Precarica le immagini degli ambienti
-            environments.forEach(env => {
-                if (!imageCache.has(env.background)) {
-                    const img = new Image();
-                    img.onload = onImageLoaded;
-                    img.onerror = () => {
-                        console.error(`Errore nel caricamento dell'immagine: ${env.background}`);
-                        onImageLoaded(); // Contare comunque per non bloccare il gioco
-                    };
-                    img.src = env.background;
-                    imageCache.set(env.background, img);
-                } else {
+            // Carica ogni immagine
+            uniqueImages.forEach(src => {
+                const img = new Image();
+                
+                img.onload = function() {
                     onImageLoaded();
-                }
+                };
+                
+                img.onerror = function() {
+                    console.error(`Errore nel caricamento dell'immagine: ${src}`);
+                    onImageLoaded(); // Continuiamo comunque
+                };
+                
+                // Imposta l'URL dell'immagine
+                img.src = src;
+                imageCache[src] = img;
             });
             
-            // Precarica le immagini dei personaggi
-            characters.forEach(char => {
-                // Immagine base
-                if (!imageCache.has(char.baseImage)) {
-                    const baseImg = new Image();
-                    baseImg.onload = onImageLoaded;
-                    baseImg.onerror = () => {
-                        console.error(`Errore nel caricamento dell'immagine: ${char.baseImage}`);
-                        onImageLoaded();
-                    };
-                    baseImg.src = char.baseImage;
-                    imageCache.set(char.baseImage, baseImg);
-                } else {
-                    onImageLoaded();
+            // Timeout di sicurezza - mostra comunque la schermata iniziale dopo 3 secondi
+            setTimeout(() => {
+                if (loadingScreen.style.display !== 'none') {
+                    console.warn('Timeout di caricamento immagini, continuiamo comunque.');
+                    loadingScreen.style.display = 'none';
+                    startScreen.style.display = 'flex';
                 }
-                
-                // Immagine salto
-                if (!imageCache.has(char.jumpImage)) {
-                    const jumpImg = new Image();
-                    jumpImg.onload = onImageLoaded;
-                    jumpImg.onerror = () => {
-                        console.error(`Errore nel caricamento dell'immagine: ${char.jumpImage}`);
-                        onImageLoaded();
-                    };
-                    jumpImg.src = char.jumpImage;
-                    imageCache.set(char.jumpImage, jumpImg);
-                } else {
-                    onImageLoaded();
-                }
-            });
-            
-            // Se non ci sono immagini da caricare, mostra subito la schermata iniziale
-            if (imagesToLoad === 0) {
-                loadingScreen.style.display = 'none';
-                startScreen.style.display = 'flex';
-            }
+            }, 3000);
         }
         
-        // Classe per gestire un singolo layer di sfondo
-        class BackgroundLayer {
-            constructor(x, width, height, imageSrc) {
-                this.x = x;
-                this.width = width;
-                this.height = height;
-                this.imageSrc = imageSrc;
-                
-                // Usa l'immagine dalla cache se disponibile
-                this.image = imageCache.get(imageSrc);
-                
-                // Se l'immagine non è nella cache, caricala
-                if (!this.image) {
-                    this.image = new Image();
-                    this.image.src = imageSrc;
-                    imageCache.set(imageSrc, this.image);
-                }
-            }
-            
-            update(speed) {
-                // Sposta il layer in base alla velocità
-                this.x -= speed;
-            }
-            
-            draw(ctx) {
-                // Disegno l'immagine di sfondo
-                if (this.image && this.image.complete) {
-                    ctx.drawImage(this.image, this.x, 0, this.width, this.height);
-                } else {
-                    // Fallback se l'immagine non è caricata
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(this.x, 0, this.width, this.height);
-                }
-            }
-            
-            // Controlla se il layer è completamente fuori dallo schermo (a sinistra)
-            isOffScreen() {
-                return this.x + this.width < 0;
-            }
-        }
-        
-        // Classe per la gestione complessiva dello sfondo
-        class BackgroundManager {
-            constructor(canvas, environments) {
+        // Classe per gestire lo sfondo con scorrimento fluido
+        class SimpleBg {
+            constructor(canvas) {
                 this.canvas = canvas;
-                this.environments = environments;
-                this.layers = [];
-                this.currentEnvironmentIndex = 0;
-                this.distance = 0;            // Distanza percorsa
-                this.environmentChangeDistance = 1000; // Distanza dopo la quale cambiare ambiente
+                this.ctx = canvas.getContext('2d');
+                this.bgImage = imageCache["bg1.png"];
+                this.x = 0;
                 
-                // Inizializza i primi layer
-                this.initializeLayers();
+                // Se l'immagine non è in cache, caricala direttamente
+                if (!this.bgImage) {
+                    this.bgImage = new Image();
+                    this.bgImage.src = "bg1.png";
+                    imageCache["bg1.png"] = this.bgImage;
+                }
             }
             
-            // Ottieni l'ambiente corrente
+            // Aggiorna la posizione dello sfondo
+            update(speed) {
+                // Muovi lo sfondo a velocità costante
+                this.x -= speed;
+                
+                // Reset quando abbiamo superato la larghezza dell'immagine
+                if (this.x <= -this.canvas.width) {
+                    this.x = 0;
+                }
+            }
+            
+            // Disegna lo sfondo con scorrimento fluido
+            draw() {
+                if (this.bgImage && this.bgImage.complete) {
+                    // Disegna due copie dell'immagine affiancate per creare scorrimento continuo
+                    // Usiamo Math.floor per evitare decimali che causano vibrazioni
+                    const x1 = Math.floor(this.x);
+                    const x2 = Math.floor(this.x + this.canvas.width);
+                    
+                    this.ctx.drawImage(this.bgImage, x1, 0, this.canvas.width, this.canvas.height);
+                    this.ctx.drawImage(this.bgImage, x2, 0, this.canvas.width, this.canvas.height);
+                } else {
+                    // Fallback quando l'immagine non è disponibile
+                    this.ctx.fillStyle = '#000';
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                }
+            }
+            
+            // Reset dello sfondo
+            reset() {
+                this.x = 0;
+            }
+        }
+        
+        // Manteniamo il background manager per compatibilità con il resto del codice
+        // ma lo implementiamo con la nuova classe SimpleBg
+        class BackgroundManager {
+            constructor(canvas) {
+                this.simpleBg = new SimpleBg(canvas);
+                this.currentEnvironmentIndex = 0;
+                this.distance = 0;
+                this.environmentChangeDistance = 3000;
+                this.environments = environments;
+            }
+            
             get currentEnvironment() {
                 return this.environments[this.currentEnvironmentIndex];
             }
             
-            // Inizializza i layer iniziali
-            initializeLayers() {
-                // Aggiungi il primo layer che parte dall'inizio dello schermo
-                this.addLayer(0);
-                
-                // Aggiungi un secondo layer che parte dalla fine del primo
-                this.addLayer(this.canvas.width);
-            }
-            
-            // Aggiungi un nuovo layer alla posizione specificata
-            addLayer(x) {
-                const layer = new BackgroundLayer(
-                    x,
-                    this.canvas.width,
-                    this.canvas.height,
-                    this.currentEnvironment.background
-                );
-                this.layers.push(layer);
-            }
-            
-            // Aggiorna tutti i layer
             update(speed) {
-                // Aggiorna la distanza percorsa
-                this.distance += speed;
-                
-                // Controlla se è ora di cambiare ambiente
-                if (this.distance >= this.environmentChangeDistance) {
-                    this.changeEnvironment();
-                    this.distance = 0;
-                }
-                
-                // Aggiorna tutti i layer
-                for (let i = this.layers.length - 1; i >= 0; i--) {
-                    const layer = this.layers[i];
-                    layer.update(speed);
+                try {
+                    this.simpleBg.update(speed);
                     
-                    // Se il layer è completamente fuori dallo schermo, rimuovilo
-                    if (layer.isOffScreen()) {
-                        this.layers.splice(i, 1);
+                    // Incrementa la distanza per il cambio ambientale
+                    this.distance += speed;
+                    
+                    // Cambio ambiente (solo per debugging, non cambia realmente lo sfondo)
+                    if (this.distance >= this.environmentChangeDistance) {
+                        this.currentEnvironmentIndex = (this.currentEnvironmentIndex + 1) % this.environments.length;
+                        this.distance = 0;
                         
-                        // Quando un layer esce dallo schermo, aggiungi un nuovo layer
-                        // con l'ambiente corrente alla fine dell'ultimo layer
-                        if (this.layers.length > 0) {
-                            const lastLayer = this.layers[this.layers.length - 1];
-                            this.addLayer(lastLayer.x + lastLayer.width);
-                        } else {
-                            // Se non ci sono layer (caso raro), aggiungi un nuovo layer all'inizio
-                            this.addLayer(0);
+                        if (DEBUG_MODE) {
+                            console.log(`Ambiente cambiato a: ${this.currentEnvironment.name}`);
                         }
                     }
-                }
-                
-                // Controlla se c'è uno spazio tra l'ultimo layer e il bordo destro dello schermo
-                if (this.layers.length > 0) {
-                    const lastLayer = this.layers[this.layers.length - 1];
-                    if (lastLayer.x + lastLayer.width < this.canvas.width) {
-                        // Aggiungi un nuovo layer alla fine dell'ultimo
-                        this.addLayer(lastLayer.x + lastLayer.width);
-                    }
+                } catch (e) {
+                    console.error("Errore nell'aggiornamento dello sfondo:", e);
                 }
             }
             
-            // Cambia l'ambiente corrente
-            changeEnvironment() {
-                // Passa all'ambiente successivo (ciclicamente)
-                this.currentEnvironmentIndex = (this.currentEnvironmentIndex + 1) % this.environments.length;
-                
-                if (DEBUG_MODE) {
-                    console.log(`Ambiente cambiato a: ${this.currentEnvironment.name}`);
-                }
-                
-                // Nota: non modifichiamo i layer esistenti, solo quelli nuovi avranno il nuovo ambiente
-            }
-            
-            // Disegna tutti i layer
             draw(ctx) {
-                for (const layer of this.layers) {
-                    layer.draw(ctx);
-                }
-                
-                // In modalità debug, mostra informazioni sull'ambiente
-                if (DEBUG_MODE) {
-                    ctx.fillStyle = 'white';
-                    ctx.font = '14px Arial';
-                    ctx.fillText(`Ambiente: ${this.currentEnvironment.name}`, 10, 40);
-                    ctx.fillText(`Distanza: ${Math.floor(this.distance)}/${this.environmentChangeDistance}`, 10, 60);
-                    ctx.fillText(`Layers: ${this.layers.length}`, 10, 80);
+                try {
+                    this.simpleBg.draw();
+                    
+                    // Debug info
+                    if (DEBUG_MODE) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = '14px Arial';
+                        ctx.fillText(`Ambiente: ${this.currentEnvironment.name}`, 10, 40);
+                        ctx.fillText(`Distanza: ${Math.floor(this.distance)}/${this.environmentChangeDistance}`, 10, 60);
+                    }
+                } catch (e) {
+                    console.error("Errore nel disegno dello sfondo:", e);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
                 }
             }
             
-            // Reset manager
             reset() {
-                this.layers = [];
+                this.simpleBg.reset();
                 this.currentEnvironmentIndex = 0;
                 this.distance = 0;
-                this.initializeLayers();
             }
         }
         
         // Crea il manager dello sfondo
         let bgManager = null;
         
-        // ==================== FINE NUOVA GESTIONE DELLO SFONDO ====================
+        // ==================== FINE SISTEMA DI SFONDI ====================
         
         // Costanti del gioco
         const GRAVITY = 0.25;
@@ -1101,10 +1036,16 @@
                 }
             }
             
-            // Aggiorna il gestore degli sfondi
-            if (bgManager) {
-                // La velocità è leggermente più bassa di quella dei tubi per dare l'effetto parallasse
-                bgManager.update(GameOptimizer.isLowEndDevice ? 1.2 : 1.5 * dt);
+            // Aggiorna lo sfondo con una velocità molto stabile
+            try {
+                if (bgManager) {
+                    // Velocità ridotta e fissa per evitare problemi di vibrazione
+                    // Utilizziamo un valore intero piccolo per massima stabilità
+                    const bgSpeed = 1; 
+                    bgManager.update(bgSpeed);
+                }
+            } catch (e) {
+                console.error("Errore nell'aggiornamento dello sfondo:", e);
             }
             
             // Incrementa il contatore dei frame
@@ -1116,11 +1057,18 @@
             // Pulisci il canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Disegna lo sfondo usando il background manager
-            if (bgManager) {
-                bgManager.draw(ctx);
-            } else {
-                // Fallback se il background manager non è pronto
+            // Disegna lo sfondo in modo più sicuro
+            try {
+                if (bgManager) {
+                    bgManager.draw(ctx);
+                } else {
+                    // Fallback se il background manager non è pronto
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            } catch (e) {
+                console.error("Errore nel disegno dello sfondo:", e);
+                // Fallback in caso di errore
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
@@ -1215,11 +1163,22 @@
             pipes.length = 0;  // Svuota l'array dei tubi
             lastTime = 0;      // Resetta il tempo dell'ultimo frame
             
-            // Inizializza o resetta il background manager se necessario
-            if (!bgManager) {
-                bgManager = new BackgroundManager(canvas, environments);
-            } else {
-                bgManager.reset();
+            // Inizializza o resetta il background manager in modo più sicuro
+            try {
+                if (!bgManager) {
+                    bgManager = new BackgroundManager(canvas, environments);
+                } else {
+                    bgManager.reset();
+                }
+            } catch (e) {
+                console.error("Errore nell'inizializzazione dello sfondo:", e);
+                // Creiamo un nuovo manager come fallback
+                try {
+                    bgManager = new BackgroundManager(canvas, environments);
+                } catch (e2) {
+                    console.error("Impossibile creare il background manager:", e2);
+                    bgManager = null; // Useremo il fallback nero in draw()
+                }
             }
             
             // Avvia la musica quando il gioco inizia (solo se l'audio è abilitato)
