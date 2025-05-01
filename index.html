@@ -256,7 +256,7 @@
     </audio>
 
     <script>
-        // Sistema di ambientazioni limitato a Bari e Lungomare
+        // Sistema di ambientazioni ottimizzato
         const environments = [
             { 
                 name: "Bari", 
@@ -270,15 +270,15 @@
             }
         ];
 
-        // Variabili per l'ambiente
-        let totalDistance = 0;
+        // Variabili per l'ambiente - ottimizzate
         let currentEnvironmentIndex = 0;
         let distanceInCurrentEnvironment = 0;
-        let environmentTransitioning = false;
-        let transitionProgress = 0;
+        let bgX = 0;
+        let isTransitioning = false;
         let nextEnvironmentIndex = 0;
+        let transitionX = 0;
 
-        // Cache per le immagini
+        // Cache per le immagini - più efficiente
         const backgroundImages = {};
         let bgImagesLoaded = false;
 
@@ -307,7 +307,6 @@
         let gameOver = false;
         let score = 0;
         let frames = 0;
-        let bgX = 0;
         let fadeAudioInterval = null;
         let lastTime = 0;
         let lastFrameTime = 0;
@@ -370,32 +369,31 @@
         
         // Precarica immagini di sfondo - versione ottimizzata
         function preloadBackgroundImages() {
-            let loadedCount = 0;
-            const totalImages = environments.length;
-            
-            environments.forEach((env) => {
+            for (let i = 0; i < environments.length; i++) {
                 const img = new Image();
+                img.src = environments[i].background;
+                backgroundImages[environments[i].background] = img;
                 
-                // Ottimizza l'evento onload
+                // Imposta l'evento onload per confermare il caricamento
                 img.onload = function() {
-                    console.log(`Sfondo ${env.background} caricato`);
-                    env.loaded = true;
-                    loadedCount++;
+                    console.log(`Sfondo ${environments[i].background} caricato`);
                     
-                    if (loadedCount === totalImages) {
-                        bgImagesLoaded = true;
+                    // Controlla se tutte le immagini sono caricate
+                    let allLoaded = true;
+                    for (let j = 0; j < environments.length; j++) {
+                        const bgImg = backgroundImages[environments[j].background];
+                        if (!bgImg || !bgImg.complete) {
+                            allLoaded = false;
+                            break;
+                        }
+                    }
+                    
+                    bgImagesLoaded = allLoaded;
+                    if (allLoaded) {
                         console.log("Tutti gli sfondi caricati");
                     }
                 };
-                
-                img.onerror = function() {
-                    console.error(`Errore caricamento ${env.background}`);
-                    env.loaded = false;
-                };
-                
-                img.src = env.background;
-                backgroundImages[env.background] = img;
-            });
+            }
         }
         
         // Caricamento immagini personaggio - versione ottimizzata
@@ -423,6 +421,11 @@
             
             birdImage1.src = characters[characterIndex].baseImage;
             birdImage2.src = characters[characterIndex].jumpImage;
+        }
+
+        // Ottimizzazione per dispositivi mobili
+        function optimizeForMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
         
         // Oggetto uccello ottimizzato
@@ -560,78 +563,76 @@
             }
         }
         
-        // Funzione per aggiornare l'ambiente - ottimizzata
+        // Funzione ottimizzata per aggiornare l'ambiente
         function updateEnvironment(dt) {
-            if (gameStarted && !gameOver) {
-                environmentIndicator.textContent = environments[currentEnvironmentIndex].name;
+            if (!gameStarted || gameOver) return;
+            
+            // Mostra il nome dell'ambiente corrente
+            environmentIndicator.textContent = environments[currentEnvironmentIndex].name;
+            
+            // Aumenta la distanza percorsa nell'ambiente corrente
+            const distanceIncrement = PIPE_SPEED * dt;
+            distanceInCurrentEnvironment += distanceIncrement;
+            
+            // Controlla se è tempo di cambiare ambiente
+            const currentEnv = environments[currentEnvironmentIndex];
+            if (!isTransitioning && distanceInCurrentEnvironment >= currentEnv.duration) {
+                isTransitioning = true;
+                nextEnvironmentIndex = (currentEnvironmentIndex + 1) % environments.length;
+                transitionX = canvas.width; // Inizia la transizione dal bordo destro
+            }
+            
+            // Gestisci la transizione tra ambienti
+            if (isTransitioning) {
+                // Velocità di transizione ridotta per dispositivi mobili
+                const transitionSpeed = 2 * dt;
+                transitionX -= transitionSpeed;
                 
-                const distanceIncrement = PIPE_SPEED * dt;
-                totalDistance += distanceIncrement;
-                distanceInCurrentEnvironment += distanceIncrement;
-                
-                const currentEnv = environments[currentEnvironmentIndex];
-                
-                if (!environmentTransitioning && distanceInCurrentEnvironment >= currentEnv.duration) {
-                    environmentTransitioning = true;
-                    transitionProgress = 0;
-                    nextEnvironmentIndex = (currentEnvironmentIndex + 1) % environments.length;
+                // Quando la transizione è completa
+                if (transitionX <= 0) {
+                    isTransitioning = false;
+                    currentEnvironmentIndex = nextEnvironmentIndex;
+                    distanceInCurrentEnvironment = 0;
                 }
-                
-                if (environmentTransitioning) {
-                    // Velocità ridotta per migliori prestazioni mobile
-                    transitionProgress += 0.6 * dt;
-                    
-                    if (transitionProgress >= 100) {
-                        environmentTransitioning = false;
-                        currentEnvironmentIndex = nextEnvironmentIndex;
-                        distanceInCurrentEnvironment = 0;
-                        bgX = 0;
-                    }
-                }
+            }
+            
+            // Aggiorna la posizione dello sfondo (scorrimento semplificato)
+            bgX -= 0.5 * dt; // Velocità ridotta per migliorare le prestazioni
+            if (Math.abs(bgX) >= canvas.width) {
+                bgX = 0; // Reset più semplice
             }
         }
         
-        // Funzione per disegnare lo sfondo - ottimizzata per mobile
+        // Funzione ottimizzata per disegnare lo sfondo
         function drawBackground() {
-            if (!bgImagesLoaded) {
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                return;
-            }
-            
-            let currentEnv = environments[currentEnvironmentIndex];
+            // Ottiene immagine sfondo corrente
+            const currentEnv = environments[currentEnvironmentIndex];
             const currentBgImage = backgroundImages[currentEnv.background];
             
-            // Disegna l'ambiente corrente
+            // Disegna lo sfondo corrente con scorrimento
             if (currentBgImage && currentBgImage.complete) {
-                // Utilizza una tecnica di ridimensionamento più efficiente
-                const movedX = bgX % canvas.width;
-                ctx.drawImage(currentBgImage, movedX, 0, canvas.width, canvas.height);
+                // Disegna primo sfondo con offset
+                ctx.drawImage(currentBgImage, bgX, 0, canvas.width, canvas.height);
                 
-                // Disegna una seconda copia solo se necessario
-                if (movedX < 0) {
-                    ctx.drawImage(currentBgImage, movedX + canvas.width, 0, canvas.width, canvas.height);
+                // Disegna copia dello sfondo per scorrimento continuo
+                if (bgX < 0) {
+                    ctx.drawImage(currentBgImage, bgX + canvas.width, 0, canvas.width, canvas.height);
                 }
             } else {
-                ctx.fillStyle = '#000000';
+                // Fallback se l'immagine non è caricata
+                ctx.fillStyle = '#87CEEB';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
             
-            // Se è in transizione, disegna il prossimo ambiente
-            if (environmentTransitioning) {
-                let nextEnv = environments[nextEnvironmentIndex];
+            // Gestisce la transizione se attiva
+            if (isTransitioning) {
+                const nextEnv = environments[nextEnvironmentIndex];
                 const nextBgImage = backgroundImages[nextEnv.background];
                 
                 if (nextBgImage && nextBgImage.complete) {
-                    // Calcola la posizione X più efficiente
-                    const transitionX = canvas.width - (canvas.width * transitionProgress / 100);
+                    // Disegna il prossimo sfondo che entra da destra
                     ctx.drawImage(nextBgImage, transitionX, 0, canvas.width, canvas.height);
                 }
-            }
-            
-            // Ottimizzazione: gestione più semplice della posizione X
-            if (Math.abs(bgX) >= canvas.width) {
-                bgX = bgX % canvas.width;
             }
         }
         
@@ -677,11 +678,6 @@
                 }
             }
             
-            // Aggiorna lo sfondo con velocità ridotta per mobile
-            if (gameStarted && !gameOver) {
-                bgX -= 1.2 * dt;
-            }
-            
             // Incrementa i frame
             frames++;
         }
@@ -708,23 +704,35 @@
                 lastFrameTime = currentTime;
             }
             
-            // Rate limiting per dispositivi meno potenti
+            const isMobile = optimizeForMobile();
+            
+            // Limita framerate in base al dispositivo
+            const minFrameTime = isMobile ? 24 : 16; // ~42 FPS su mobile, ~60 FPS su desktop
             const elapsed = currentTime - lastFrameTime;
-            if (elapsed < 16) { // circa 60 FPS max
+            
+            if (elapsed < minFrameTime) {
                 requestAnimationFrame(gameLoop);
                 return;
             }
             
             lastFrameTime = currentTime;
             
+            // Limita aggiornamenti su mobile
+            if (isMobile && frames % 2 !== 0) {
+                // Su mobile, aggiorna solo un frame su due
+                draw(); // Mantieni il disegno per fluidità visiva
+            } else {
+                // Aggiornamento completo
+                update(currentTime);
+                draw();
+            }
+            
             // Pulizia memoria non utilizzata
             if (pipes.length > MAX_PIPES) {
                 pipes.splice(0, pipes.length - MAX_PIPES);
             }
             
-            update(currentTime);
-            draw();
-            
+            frames++;
             requestAnimationFrame(gameLoop);
         }
         
@@ -777,10 +785,11 @@
             pipeCounter = 0;
             bgX = 0;
             
-            totalDistance = 0;
+            // Reset variabili ambiente
             currentEnvironmentIndex = 0;
             distanceInCurrentEnvironment = 0;
-            environmentTransitioning = false;
+            isTransitioning = false;
+            transitionX = 0;
             
             environmentIndicator.textContent = environments[currentEnvironmentIndex].name;
             
@@ -897,6 +906,11 @@
                 } else {
                     bird.flap();
                 }
+            });
+            
+            // Gestione bottone Spotify
+            spotifyButton.addEventListener('click', function() {
+                window.open('https://open.spotify.com', '_blank');
             });
             
             // Inizializza il primo personaggio
