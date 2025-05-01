@@ -216,6 +216,18 @@
         #audio-toggle:hover {
             background-color: rgba(0, 0, 0, 0.7);
         }
+        
+        /* Stile per l'indicatore di ambiente */
+        #environment-indicator {
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+            z-index: 5;
+        }
     </style>
 </head>
 <body>
@@ -277,6 +289,8 @@
         <div id="audio-controls">
             <button id="audio-toggle">🔊</button>
         </div>
+        
+        <div id="environment-indicator"></div>
     </div>
 
     <!-- Elemento audio per la colonna sonora -->
@@ -286,6 +300,31 @@
     </audio>
 
     <script>
+        // Sistema di ambientazioni limitato a Bari e Lungomare
+        const environments = [
+            { 
+                name: "Bari", 
+                background: "bg1.png",
+                duration: 1500 // Durata in pixel (o frame normalizzati)
+            },
+            { 
+                name: "Lungomare", 
+                background: "bg2.png",
+                duration: 1500
+            }
+        ];
+
+        // Variabili per gestire l'ambiente corrente
+        let totalDistance = 0;
+        let currentEnvironmentIndex = 0;
+        let distanceInCurrentEnvironment = 0;
+        let environmentTransitioning = false;
+        let transitionProgress = 0;
+        let nextEnvironmentIndex = 0;
+
+        // Array per contenere le immagini di sfondo precaricate
+        const backgroundImages = {};
+
         // Funzione per dimensionare il canvas in base allo schermo
         function resizeGame() {
             const container = document.getElementById('game-container');
@@ -336,6 +375,7 @@
         const homeButton = document.getElementById('home-button');
         const finalScoreElement = document.getElementById('final-score');
         const spotifyButton = document.getElementById('spotify-button');
+        const environmentIndicator = document.getElementById('environment-indicator');
         
         // Elementi audio
         const soundtrack = document.getElementById('soundtrack');
@@ -351,7 +391,7 @@
         // Variabile per tenere traccia del personaggio selezionato
         let selectedCharacter = 0;
         
-        // Configurazione dei personaggi (NUOVO)
+        // Configurazione dei personaggi
         const characters = [
             { 
                 name: "Niko",
@@ -395,7 +435,7 @@
             });
         });
         
-        // Funzione per caricare le immagini del personaggio selezionato (NUOVO)
+        // Funzione per caricare le immagini del personaggio selezionato
         function loadCharacterImages() {
             // Determina quale personaggio usare (Niko o Elvio)
             // Se il personaggio selezionato è 0, usa Niko, altrimenti usa Elvio
@@ -421,7 +461,68 @@
             soundtrack.load();
             soundtrack.volume = 1.0;
             console.log("Audio precaricato");
+            
+            // Precarica le immagini di sfondo
+            preloadBackgroundImages();
         });
+        
+        // Precarica le immagini di sfondo
+        function preloadBackgroundImages() {
+            environments.forEach((env) => {
+                const img = new Image();
+                img.onload = function() {
+                    console.log(`Sfondo ${env.background} caricato con successo`);
+                    env.loaded = true;
+                };
+                img.onerror = function() {
+                    console.error(`Impossibile caricare lo sfondo ${env.background}`);
+                    env.loaded = false;
+                };
+                img.src = env.background;
+                
+                // Salva l'immagine nell'oggetto per facile accesso
+                backgroundImages[env.background] = img;
+            });
+        }
+        
+        // Funzione per aggiornare l'ambiente in base alla distanza percorsa
+        function updateEnvironment(dt) {
+            if (gameStarted && !gameOver) {
+                // Aggiorna l'indicatore di ambiente
+                environmentIndicator.textContent = environments[currentEnvironmentIndex].name;
+                
+                // Aumenta la distanza totale percorsa
+                const distanceIncrement = PIPE_SPEED * dt;
+                totalDistance += distanceIncrement;
+                distanceInCurrentEnvironment += distanceIncrement;
+                
+                const currentEnv = environments[currentEnvironmentIndex];
+                
+                // Controlla se è tempo di cambiare ambiente
+                if (!environmentTransitioning && distanceInCurrentEnvironment >= currentEnv.duration) {
+                    // Inizia la transizione all'ambiente successivo
+                    environmentTransitioning = true;
+                    transitionProgress = 0;
+                    nextEnvironmentIndex = (currentEnvironmentIndex + 1) % environments.length;
+                    console.log(`Transizione all'ambiente: ${environments[nextEnvironmentIndex].name}`);
+                }
+                
+                // Gestisci la transizione tra ambienti
+                if (environmentTransitioning) {
+                    transitionProgress += 0.8 * dt; // Velocità della transizione (aumentata per uno scorrimento più veloce)
+                    
+                    if (transitionProgress >= 100) {
+                        // Transizione completata
+                        environmentTransitioning = false;
+                        currentEnvironmentIndex = nextEnvironmentIndex;
+                        distanceInCurrentEnvironment = 0;
+                        console.log(`Nuovo ambiente: ${environments[currentEnvironmentIndex].name}`);
+                        // Resetta la posizione dello sfondo quando cambia ambiente
+                        bgX = 0;
+                    }
+                }
+            }
+        }
         
         // Gestione audio
         function toggleAudio() {
@@ -462,20 +563,6 @@
         let score = 0;
         let frames = 0;
         let bgX = 0; // Posizione X dello sfondo
-        
-        // Caricamento delle immagini
-        const bgImage = new Image();
-        let bgImageLoaded = false;
-        bgImage.onload = function() {
-            bgImageLoaded = true;
-            console.log("Immagine di sfondo caricata con successo");
-        };
-        bgImage.onerror = function() {
-            console.error("Impossibile caricare l'immagine di sfondo");
-            bgImageLoaded = false;
-            // Lo sfondo sarà nero come definito nella funzione drawBackground
-        };
-        bgImage.src = 'bg1.png';
         
         // Caricamento delle immagini del personaggio
         const birdImage1 = new Image(); // Immagine per la discesa
@@ -662,22 +749,44 @@
             }
         }
         
-        // Funzione di disegno dello sfondo
+        // Funzione per disegnare lo sfondo con l'ambiente corrente
         function drawBackground() {
-            // Disegna l'immagine di sfondo se caricata
-            if (bgImageLoaded) {
+            let currentEnv = environments[currentEnvironmentIndex];
+            const currentBgImage = backgroundImages[currentEnv.background];
+            
+            // Disegna l'ambiente corrente
+            if (currentBgImage && currentBgImage.complete) {
                 // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
-                ctx.drawImage(bgImage, bgX % canvas.width, 0, canvas.width, canvas.height);
-                ctx.drawImage(bgImage, (bgX % canvas.width) + canvas.width, 0, canvas.width, canvas.height);
-                
-                // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
-                if (Math.abs(bgX) >= canvas.width) {
-                    bgX = bgX % canvas.width;
-                }
+                ctx.drawImage(currentBgImage, bgX % canvas.width, 0, canvas.width, canvas.height);
+                ctx.drawImage(currentBgImage, (bgX % canvas.width) + canvas.width, 0, canvas.width, canvas.height);
             } else {
-                // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
+                // Se l'immagine non è caricata, usa uno sfondo nero
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            // Se è in transizione, disegna anche il prossimo ambiente dopo quello corrente
+            if (environmentTransitioning) {
+                let nextEnv = environments[nextEnvironmentIndex];
+                const nextBgImage = backgroundImages[nextEnv.background];
+                
+                if (nextBgImage && nextBgImage.complete) {
+                    // Calcola la posizione X dello sfondo successivo (a destra di quello corrente)
+                    // Mentre la transizione procede, lo sfondo successivo si avvicina
+                    const transitionX = canvas.width - (canvas.width * transitionProgress / 100);
+                    
+                    // Disegna il prossimo ambiente a destra di quello corrente
+                    ctx.drawImage(nextBgImage, transitionX, 0, canvas.width, canvas.height);
+                    ctx.drawImage(nextBgImage, transitionX + canvas.width, 0, canvas.width, canvas.height);
+                }
+            }
+            
+            // Ripristina l'alpha
+            ctx.globalAlpha = 1;
+            
+            // Se l'immagine di sfondo è completamente fuori dallo schermo, resetta la posizione
+            if (Math.abs(bgX) >= canvas.width) {
+                bgX = bgX % canvas.width;
             }
         }
         
@@ -702,6 +811,9 @@
             // Limita deltaTime per evitare comportamenti strani quando la tab è in background
             const dt = Math.min(deltaTime, 3);
             
+            // Aggiorna l'ambiente
+            updateEnvironment(dt);
+            
             // Conta i frame normalizzati per la generazione dei tubi
             if (gameStarted && !gameOver) {
                 pipeCounter += dt;
@@ -725,7 +837,7 @@
             
             // Aggiorna lo sfondo in base al tempo
             if (gameStarted && !gameOver) {
-                bgX -= 1.5 * dt; // Velocità aumentata da 0.5 a 1.5 (triplicata)
+                bgX -= 1.5 * dt; // Velocità di scorrimento
             }
             
             // Incrementa il contatore dei frame
@@ -784,6 +896,9 @@
             finalScoreElement.textContent = `Punteggio: ${score}`;
             gameOverScreen.style.display = 'flex';
             
+            // Nascondi l'indicatore di ambiente
+            environmentIndicator.textContent = '';
+            
             // Ferma la musica quando il gioco termina o riduci il volume gradualmente
             if (audioEnabled) {
                 // Ferma qualsiasi fade in corso se c'è
@@ -816,6 +931,16 @@
             frames = 0;
             pipeCounter = 0;
             bgX = 0; // Resetta la posizione dello sfondo
+            
+            // Reset dell'ambiente
+            totalDistance = 0;
+            currentEnvironmentIndex = 0;
+            distanceInCurrentEnvironment = 0;
+            environmentTransitioning = false;
+            
+            // Mostra l'indicatore di ambiente corrente
+            environmentIndicator.textContent = environments[currentEnvironmentIndex].name;
+            
             bird.reset();
             pipes.length = 0;  // Svuota l'array dei tubi
             lastTime = 0;      // Resetta il tempo dell'ultimo frame
@@ -861,6 +986,9 @@
             score = 0;
             pipes.length = 0;
             bird.reset();
+            
+            // Nascondi l'indicatore di ambiente
+            environmentIndicator.textContent = '';
             
             // Mostra la schermata iniziale
             startScreen.style.display = 'flex';
