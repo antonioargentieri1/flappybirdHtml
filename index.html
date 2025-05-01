@@ -549,27 +549,29 @@
         
         audioToggle.addEventListener('click', toggleAudio);
         
-        // ==================== SISTEMA DI SFONDI STABILE PER WEB ====================
+        // ==================== SISTEMA DI SFONDI CON CAMBIO AMBIENTE ====================
         
-        // Immagini disponibili per gli ambienti (usare immagini reali)
+        // Immagini disponibili per gli ambienti (ora con immagini diverse)
         const environments = [
             { name: "City", background: "bg1.png" },
-            { name: "Forest", background: "bg1.png" }, // Usa lo stesso sfondo fino a quando non risolviamo
-            { name: "Desert", background: "bg1.png" }  // Usa lo stesso sfondo fino a quando non risolviamo
+            { name: "Forest", background: "bg2.png" }, // Assicurati che esista questo file
+            { name: "Desert", background: "bg3.png" }  // Assicurati che esista questo file
         ];
         
-        // Cache per le immagini con precaricamento semplificato
+        // Cache per le immagini con precaricamento
         const imageCache = {};
         
-        // Precaricamento immagini semplificato e robusto
+        // Precaricamento immagini con supporto a tutti gli sfondi
         function preloadImages() {
             let imagesLoaded = 0;
             
-            // Aggiungi le immagini uniche da caricare
+            // Aggiungi tutte le immagini da caricare
             const uniqueImages = [];
             
-            // Aggiungi solo bg1.png per ora, per assicurarci che funzioni
-            uniqueImages.push("bg1.png");
+            // Aggiungi tutti gli sfondi
+            environments.forEach(env => {
+                uniqueImages.push(env.background);
+            });
             
             // Aggiungi i personaggi
             uniqueImages.push("niko_1.png");
@@ -584,8 +586,9 @@
                     console.log(`Immagini caricate: ${imagesLoaded}/${uniqueImages.length}`);
                 }
                 
-                // Mostra la schermata iniziale quando abbiamo abbastanza immagini
-                if (imagesLoaded >= 1 || imagesLoaded >= uniqueImages.length) {
+                // Mostra la schermata iniziale quando abbiamo caricato tutti gli sfondi
+                // o quando abbiamo caricato almeno la prima immagine di sfondo
+                if (imagesLoaded >= environments.length || imagesLoaded >= uniqueImages.length) {
                     loadingScreen.style.display = 'none';
                     startScreen.style.display = 'flex';
                 }
@@ -619,45 +622,158 @@
             }, 3000);
         }
         
-        // Classe per gestire lo sfondo con scorrimento fluido
-        class SimpleBg {
-            constructor(canvas) {
+        // Classe per gestire lo sfondo con cambio ambiente
+        class EnhancedBg {
+            constructor(canvas, environments) {
                 this.canvas = canvas;
                 this.ctx = canvas.getContext('2d');
-                this.bgImage = imageCache["bg1.png"];
+                this.environments = environments;
+                this.currentEnvironmentIndex = 0;
                 this.x = 0;
+                this.distance = 0;
+                this.environmentChangeDistance = 100; // Distanza prima del cambio ambiente
+                this.transitioning = false;
+                this.transitionProgress = 0;
+                this.transitionDuration = 120; // Durata transizione in frame
+                this.nextEnvironmentIndex = -1;
+                
+                // Carica l'immagine iniziale
+                this.currentImage = imageCache[this.environments[this.currentEnvironmentIndex].background];
+                this.nextImage = null;
                 
                 // Se l'immagine non è in cache, caricala direttamente
-                if (!this.bgImage) {
-                    this.bgImage = new Image();
-                    this.bgImage.src = "bg1.png";
-                    imageCache["bg1.png"] = this.bgImage;
+                if (!this.currentImage) {
+                    this.currentImage = new Image();
+                    this.currentImage.src = this.environments[this.currentEnvironmentIndex].background;
+                    imageCache[this.environments[this.currentEnvironmentIndex].background] = this.currentImage;
                 }
             }
             
             // Aggiorna la posizione dello sfondo
             update(speed) {
-                // Muovi lo sfondo a velocità costante
-                this.x -= speed;
-                
-                // Reset quando abbiamo superato la larghezza dell'immagine
-                if (this.x <= -this.canvas.width) {
-                    this.x = 0;
+                try {
+                    // Muovi lo sfondo a velocità costante
+                    this.x -= speed;
+                    
+                    // Reset quando abbiamo superato la larghezza dell'immagine
+                    if (this.x <= -this.canvas.width) {
+                        this.x = 0;
+                    }
+                    
+                    // Aggiorna la distanza percorsa
+                    this.distance += speed;
+                    
+                    // Se siamo in transizione, aggiorniamo il progresso
+                    if (this.transitioning) {
+                        this.transitionProgress++;
+                        
+                        // Transizione completata
+                        if (this.transitionProgress >= this.transitionDuration) {
+                            this.currentEnvironmentIndex = this.nextEnvironmentIndex;
+                            this.currentImage = this.nextImage;
+                            this.transitioning = false;
+                            this.transitionProgress = 0;
+                            this.nextEnvironmentIndex = -1;
+                            this.nextImage = null;
+                        }
+                    }
+                    // Controlla se è ora di cambiare ambiente
+                    else if (this.distance >= this.environmentChangeDistance) {
+                        this.startTransition();
+                        this.distance = 0;
+                    }
+                } catch (e) {
+                    console.error("Errore nell'aggiornamento sfondo:", e);
                 }
             }
             
-            // Disegna lo sfondo con scorrimento fluido
+            // Avvia la transizione al prossimo ambiente
+            startTransition() {
+                try {
+                    // Calcola il prossimo ambiente
+                    this.nextEnvironmentIndex = (this.currentEnvironmentIndex + 1) % this.environments.length;
+                    
+                    // Prepara l'immagine successiva
+                    const nextBgSrc = this.environments[this.nextEnvironmentIndex].background;
+                    this.nextImage = imageCache[nextBgSrc];
+                    
+                    // Se l'immagine non è in cache, caricala
+                    if (!this.nextImage) {
+                        this.nextImage = new Image();
+                        this.nextImage.src = nextBgSrc;
+                        imageCache[nextBgSrc] = this.nextImage;
+                    }
+                    
+                    // Inizia la transizione solo se l'immagine è pronta
+                    if (this.nextImage.complete) {
+                        this.transitioning = true;
+                        this.transitionProgress = 0;
+                        
+                        if (DEBUG_MODE) {
+                            console.log(`Inizia transizione all'ambiente: ${this.environments[this.nextEnvironmentIndex].name}`);
+                        }
+                    } else {
+                        // Se l'immagine non è pronta, riprova al prossimo ciclo
+                        this.nextImage.onload = () => {
+                            this.transitioning = true;
+                            this.transitionProgress = 0;
+                            
+                            if (DEBUG_MODE) {
+                                console.log(`Inizia transizione all'ambiente: ${this.environments[this.nextEnvironmentIndex].name}`);
+                            }
+                        };
+                        
+                        // In caso di errore, annulla la transizione
+                        this.nextImage.onerror = () => {
+                            console.error(`Impossibile caricare l'immagine: ${nextBgSrc}`);
+                            this.nextEnvironmentIndex = -1;
+                            this.nextImage = null;
+                        };
+                    }
+                } catch (e) {
+                    console.error("Errore nell'avvio transizione:", e);
+                    this.transitioning = false;
+                }
+            }
+            
+            // Disegna lo sfondo con transizione
             draw() {
-                if (this.bgImage && this.bgImage.complete) {
-                    // Disegna due copie dell'immagine affiancate per creare scorrimento continuo
-                    // Usiamo Math.floor per evitare decimali che causano vibrazioni
+                try {
+                    if (!this.currentImage || !this.currentImage.complete) {
+                        // Fallback quando l'immagine non è disponibile
+                        this.ctx.fillStyle = '#000';
+                        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                        return;
+                    }
+                    
+                    // Arrotonda la posizione X per evitare vibrazioni
                     const x1 = Math.floor(this.x);
                     const x2 = Math.floor(this.x + this.canvas.width);
                     
-                    this.ctx.drawImage(this.bgImage, x1, 0, this.canvas.width, this.canvas.height);
-                    this.ctx.drawImage(this.bgImage, x2, 0, this.canvas.width, this.canvas.height);
-                } else {
-                    // Fallback quando l'immagine non è disponibile
+                    if (this.transitioning && this.nextImage && this.nextImage.complete) {
+                        // Calcola l'opacità della transizione (da 0 a 1)
+                        const opacity = this.transitionProgress / this.transitionDuration;
+                        
+                        // Prima disegna l'immagine corrente
+                        this.ctx.globalAlpha = 1.0;
+                        this.ctx.drawImage(this.currentImage, x1, 0, this.canvas.width, this.canvas.height);
+                        this.ctx.drawImage(this.currentImage, x2, 0, this.canvas.width, this.canvas.height);
+                        
+                        // Poi sovrapponi la nuova con l'opacità calcolata
+                        this.ctx.globalAlpha = opacity;
+                        this.ctx.drawImage(this.nextImage, x1, 0, this.canvas.width, this.canvas.height);
+                        this.ctx.drawImage(this.nextImage, x2, 0, this.canvas.width, this.canvas.height);
+                        
+                        // Resetta l'opacità
+                        this.ctx.globalAlpha = 1.0;
+                    } else {
+                        // Disegno normale senza transizione
+                        this.ctx.drawImage(this.currentImage, x1, 0, this.canvas.width, this.canvas.height);
+                        this.ctx.drawImage(this.currentImage, x2, 0, this.canvas.width, this.canvas.height);
+                    }
+                } catch (e) {
+                    console.error("Errore nel disegno dello sfondo:", e);
+                    // Fallback
                     this.ctx.fillStyle = '#000';
                     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 }
@@ -666,14 +782,26 @@
             // Reset dello sfondo
             reset() {
                 this.x = 0;
+                this.distance = 0;
+                this.currentEnvironmentIndex = 0;
+                this.transitioning = false;
+                this.transitionProgress = 0;
+                this.nextEnvironmentIndex = -1;
+                this.nextImage = null;
+                this.currentImage = imageCache[this.environments[this.currentEnvironmentIndex].background];
+            }
+            
+            // Metodo per ottenere l'ambiente corrente (per compatibilità)
+            get currentEnvironment() {
+                return this.environments[this.currentEnvironmentIndex];
             }
         }
         
         // Manteniamo il background manager per compatibilità con il resto del codice
-        // ma lo implementiamo con la nuova classe SimpleBg
+        // ma lo implementiamo con la nuova classe EnhancedBg
         class BackgroundManager {
-            constructor(canvas) {
-                this.simpleBg = new SimpleBg(canvas);
+            constructor(canvas, environments) {
+                this.enhancedBg = new EnhancedBg(canvas, environments);
                 this.currentEnvironmentIndex = 0;
                 this.distance = 0;
                 this.environmentChangeDistance = 3000;
@@ -681,25 +809,15 @@
             }
             
             get currentEnvironment() {
-                return this.environments[this.currentEnvironmentIndex];
+                return this.enhancedBg.currentEnvironment;
             }
             
             update(speed) {
                 try {
-                    this.simpleBg.update(speed);
-                    
-                    // Incrementa la distanza per il cambio ambientale
-                    this.distance += speed;
-                    
-                    // Cambio ambiente (solo per debugging, non cambia realmente lo sfondo)
-                    if (this.distance >= this.environmentChangeDistance) {
-                        this.currentEnvironmentIndex = (this.currentEnvironmentIndex + 1) % this.environments.length;
-                        this.distance = 0;
-                        
-                        if (DEBUG_MODE) {
-                            console.log(`Ambiente cambiato a: ${this.currentEnvironment.name}`);
-                        }
-                    }
+                    this.enhancedBg.update(speed);
+                    // Aggiorniamo anche le nostre proprietà per compatibilità
+                    this.currentEnvironmentIndex = this.enhancedBg.currentEnvironmentIndex;
+                    this.distance = this.enhancedBg.distance;
                 } catch (e) {
                     console.error("Errore nell'aggiornamento dello sfondo:", e);
                 }
@@ -707,14 +825,19 @@
             
             draw(ctx) {
                 try {
-                    this.simpleBg.draw();
+                    this.enhancedBg.draw();
                     
                     // Debug info
                     if (DEBUG_MODE) {
                         ctx.fillStyle = 'white';
                         ctx.font = '14px Arial';
-                        ctx.fillText(`Ambiente: ${this.currentEnvironment.name}`, 10, 40);
-                        ctx.fillText(`Distanza: ${Math.floor(this.distance)}/${this.environmentChangeDistance}`, 10, 60);
+                        const env = this.environments[this.currentEnvironmentIndex];
+                        ctx.fillText(`Ambiente: ${env.name}`, 10, 40);
+                        ctx.fillText(`Distanza: ${Math.floor(this.distance)}/${this.enhancedBg.environmentChangeDistance}`, 10, 60);
+                        
+                        if (this.enhancedBg.transitioning) {
+                            ctx.fillText(`Transizione: ${Math.floor((this.enhancedBg.transitionProgress / this.enhancedBg.transitionDuration) * 100)}%`, 10, 80);
+                        }
                     }
                 } catch (e) {
                     console.error("Errore nel disegno dello sfondo:", e);
@@ -724,7 +847,7 @@
             }
             
             reset() {
-                this.simpleBg.reset();
+                this.enhancedBg.reset();
                 this.currentEnvironmentIndex = 0;
                 this.distance = 0;
             }
