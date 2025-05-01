@@ -17,7 +17,6 @@
             background-color: #000;
             font-family: Arial, sans-serif;
             overflow: hidden; /* Impedisce lo scroll */
-            touch-action: none; /* Migliora l'esperienza touch */
         }
         
         #game-container {
@@ -151,20 +150,6 @@
             padding: 20px;
         }
         
-        /* Stile per il pulsante di debug */
-        #debug-button {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 100;
-            background-color: rgba(255, 0, 0, 0.5);
-            color: white;
-            border: none;
-            padding: 5px;
-            font-size: 12px;
-            display: none; /* Nascosto di default */
-        }
-        
         h1 {
             color: #fff;
             font-size: 36px;
@@ -231,48 +216,13 @@
         #audio-toggle:hover {
             background-color: rgba(0, 0, 0, 0.7);
         }
-        
-        /* Stile per il loading screen */
-        #loading-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 30;
-        }
-        
-        .loader {
-            border: 5px solid #333;
-            border-top: 5px solid #4CAF50;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
     <div id="game-container">
         <canvas id="game-canvas" width="360" height="640"></canvas>
         
-        <div id="loading-screen">
-            <div class="loader"></div>
-            <p class="score">Caricamento...</p>
-        </div>
-        
-        <div id="start-screen" style="display: none;">
+        <div id="start-screen">
             <h1>ONLYOUCAN</h1>
             <p class="score">Premi per saltare</p>
             <button id="start-button">Inizia</button>
@@ -327,9 +277,6 @@
         <div id="audio-controls">
             <button id="audio-toggle">🔊</button>
         </div>
-        
-        <!-- Pulsante di debug (nascosto di default) -->
-        <button id="debug-button">Debug Info</button>
     </div>
 
     <!-- Elemento audio per la colonna sonora -->
@@ -339,57 +286,7 @@
     </audio>
 
     <script>
-        // Configurazione del gioco
-        const DEBUG_MODE = false; // Impostare su true per attivare i log di debug e il pulsante
-        
-        // Oggetto per il monitoraggio delle prestazioni
-        const Performance = {
-            frames: 0,
-            lastCheck: Date.now(),
-            fps: 0,
-            
-            update() {
-                this.frames++;
-                const now = Date.now();
-                const elapsed = now - this.lastCheck;
-                
-                if (elapsed >= 1000) {
-                    this.fps = Math.round((this.frames * 1000) / elapsed);
-                    this.frames = 0;
-                    this.lastCheck = now;
-                    
-                    if (DEBUG_MODE) {
-                        console.log(`FPS: ${this.fps}`);
-                    }
-                }
-                return this.fps;
-            },
-            
-            // Imposta la visualizzazione FPS se debug è attivo
-            showFPS(ctx) {
-                if (DEBUG_MODE) {
-                    ctx.fillStyle = 'white';
-                    ctx.font = '14px Arial';
-                    ctx.fillText(`FPS: ${this.fps}`, 10, 20);
-                }
-            }
-        };
-
-        // Mostro il pulsante di debug se DEBUG_MODE è attivo
-        if (DEBUG_MODE) {
-            document.getElementById('debug-button').style.display = 'block';
-            document.getElementById('debug-button').addEventListener('click', function() {
-                // Mostra informazioni di debug o apri un pannello
-                console.log('Memory usage:', performance.memory ? performance.memory : 'Not available');
-                console.log('BackgroundManager stats:', bgManager ? {
-                    activeEnvironment: bgManager.currentEnvironment,
-                    layers: bgManager.layers.length,
-                    distance: bgManager.distance
-                } : 'Not available');
-            });
-        }
-        
-        // Funzione per ridimensionare il gioco in base alle dimensioni dello schermo
+        // Funzione per dimensionare il canvas in base allo schermo
         function resizeGame() {
             const container = document.getElementById('game-container');
             const canvas = document.getElementById('game-canvas');
@@ -417,25 +314,19 @@
             canvas.style.width = `${newWidth}px`;
             canvas.style.height = `${newHeight}px`;
             
-            // Ottimizzazioni per dispositivi mobili
-            if (/iPad|iPhone|iPod|Android/.test(navigator.userAgent)) {
+            // Leggera ottimizzazione per iOS - non invasiva
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
                 canvas.style.willChange = 'transform';
-                
-                // Riduci la risoluzione interna del canvas per dispositivi meno potenti
-                // ma solo se lo schermo è abbastanza grande da non compromettere la visibilità
-                if (window.devicePixelRatio > 1 && newWidth > 300) {
-                    // Mantieni la dimensione visuale ma riduci la risoluzione interna
-                    canvas.width = 360; // Mantieni larghezza base
-                    canvas.height = 640; // Mantieni altezza base
-                }
             }
         }
 
-        // Ridimensiona il gioco all'inizio e al ridimensionamento della finestra
+        // Ridimensiona il gioco all'avvio
         window.addEventListener('load', resizeGame);
+        
+        // Ridimensiona il gioco quando la finestra cambia dimensione
         window.addEventListener('resize', resizeGame);
         
-        // Ottengo gli elementi DOM
+        // Ottenimento degli elementi DOM
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
         const startScreen = document.getElementById('start-screen');
@@ -445,7 +336,6 @@
         const homeButton = document.getElementById('home-button');
         const finalScoreElement = document.getElementById('final-score');
         const spotifyButton = document.getElementById('spotify-button');
-        const loadingScreen = document.getElementById('loading-screen');
         
         // Elementi audio
         const soundtrack = document.getElementById('soundtrack');
@@ -461,7 +351,7 @@
         // Variabile per tenere traccia del personaggio selezionato
         let selectedCharacter = 0;
         
-        // Configurazione dei personaggi
+        // Configurazione dei personaggi (NUOVO)
         const characters = [
             { 
                 name: "Niko",
@@ -498,17 +388,14 @@
                 
                 // Aggiorna il personaggio selezionato
                 selectedCharacter = parseInt(this.getAttribute('data-character'));
-                
-                if (DEBUG_MODE) {
-                    console.log('Personaggio selezionato:', selectedCharacter);
-                }
+                console.log('Personaggio selezionato:', selectedCharacter);
                 
                 // Carica le immagini del personaggio selezionato
                 loadCharacterImages();
             });
         });
         
-        // Funzione per caricare le immagini del personaggio selezionato
+        // Funzione per caricare le immagini del personaggio selezionato (NUOVO)
         function loadCharacterImages() {
             // Determina quale personaggio usare (Niko o Elvio)
             // Se il personaggio selezionato è 0, usa Niko, altrimenti usa Elvio
@@ -518,16 +405,22 @@
             birdImage1.src = characters[characterIndex].baseImage;
             birdImage2.src = characters[characterIndex].jumpImage;
             
-            if (DEBUG_MODE) {
-                console.log(`Caricando immagini per ${characters[characterIndex].name}:`, 
-                            characters[characterIndex].baseImage, 
-                            characters[characterIndex].jumpImage);
-            }
+            console.log(`Caricando immagini per ${characters[characterIndex].name}:`, 
+                        characters[characterIndex].baseImage, 
+                        characters[characterIndex].jumpImage);
         }
         
         // Event listener per il pulsante Spotify
         spotifyButton.addEventListener('click', function() {
             window.open('https://open.spotify.com/artist/7wsOlF3P2t6BB1ali9W1t1?si=bQuFkTYrQsmO42ZqxtTqXA', '_blank');
+        });
+        
+        // Precarica l'audio per migliorare la reattività
+        window.addEventListener('load', function() {
+            // Precarica l'audio silenziosamente (senza riprodurlo)
+            soundtrack.load();
+            soundtrack.volume = 1.0;
+            console.log("Audio precaricato");
         });
         
         // Gestione audio
@@ -549,320 +442,11 @@
         
         audioToggle.addEventListener('click', toggleAudio);
         
-        // ==================== SISTEMA DI SFONDI CON CAMBIO AMBIENTE ====================
-        
-        // Immagini disponibili per gli ambienti (ora con immagini diverse)
-        const environments = [
-            { name: "City", background: "bg1.png" },
-            { name: "Forest", background: "bg2.png" }, // Assicurati che esista questo file
-            { name: "Desert", background: "bg3.png" }  // Assicurati che esista questo file
-        ];
-        
-        // Cache per le immagini con precaricamento
-        const imageCache = {};
-        
-        // Precaricamento immagini con supporto a tutti gli sfondi
-        function preloadImages() {
-            let imagesLoaded = 0;
-            
-            // Aggiungi tutte le immagini da caricare
-            const uniqueImages = [];
-            
-            // Aggiungi tutti gli sfondi
-            environments.forEach(env => {
-                uniqueImages.push(env.background);
-            });
-            
-            // Aggiungi i personaggi
-            uniqueImages.push("niko_1.png");
-            uniqueImages.push("niko_2.png");
-            uniqueImages.push("elvio_1.png");
-            uniqueImages.push("elvio_2.png");
-            
-            // Funzione di callback per immagine caricata
-            function onImageLoaded() {
-                imagesLoaded++;
-                if (DEBUG_MODE) {
-                    console.log(`Immagini caricate: ${imagesLoaded}/${uniqueImages.length}`);
-                }
-                
-                // Mostra la schermata iniziale quando abbiamo caricato tutti gli sfondi
-                // o quando abbiamo caricato almeno la prima immagine di sfondo
-                if (imagesLoaded >= environments.length || imagesLoaded >= uniqueImages.length) {
-                    loadingScreen.style.display = 'none';
-                    startScreen.style.display = 'flex';
-                }
-            }
-            
-            // Carica ogni immagine
-            uniqueImages.forEach(src => {
-                const img = new Image();
-                
-                img.onload = function() {
-                    onImageLoaded();
-                };
-                
-                img.onerror = function() {
-                    console.error(`Errore nel caricamento dell'immagine: ${src}`);
-                    onImageLoaded(); // Continuiamo comunque
-                };
-                
-                // Imposta l'URL dell'immagine
-                img.src = src;
-                imageCache[src] = img;
-            });
-            
-            // Timeout di sicurezza - mostra comunque la schermata iniziale dopo 3 secondi
-            setTimeout(() => {
-                if (loadingScreen.style.display !== 'none') {
-                    console.warn('Timeout di caricamento immagini, continuiamo comunque.');
-                    loadingScreen.style.display = 'none';
-                    startScreen.style.display = 'flex';
-                }
-            }, 3000);
-        }
-        
-        // Classe per gestire lo sfondo con cambio ambiente
-        class EnhancedBg {
-            constructor(canvas, environments) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
-                this.environments = environments;
-                this.currentEnvironmentIndex = 0;
-                this.x = 0;
-                this.distance = 0;
-                this.environmentChangeDistance = 100; // Distanza prima del cambio ambiente
-                this.transitioning = false;
-                this.transitionProgress = 0;
-                this.transitionDuration = 120; // Durata transizione in frame
-                this.nextEnvironmentIndex = -1;
-                
-                // Carica l'immagine iniziale
-                this.currentImage = imageCache[this.environments[this.currentEnvironmentIndex].background];
-                this.nextImage = null;
-                
-                // Se l'immagine non è in cache, caricala direttamente
-                if (!this.currentImage) {
-                    this.currentImage = new Image();
-                    this.currentImage.src = this.environments[this.currentEnvironmentIndex].background;
-                    imageCache[this.environments[this.currentEnvironmentIndex].background] = this.currentImage;
-                }
-            }
-            
-            // Aggiorna la posizione dello sfondo
-            update(speed) {
-                try {
-                    // Muovi lo sfondo a velocità costante
-                    this.x -= speed;
-                    
-                    // Reset quando abbiamo superato la larghezza dell'immagine
-                    if (this.x <= -this.canvas.width) {
-                        this.x = 0;
-                    }
-                    
-                    // Aggiorna la distanza percorsa
-                    this.distance += speed;
-                    
-                    // Se siamo in transizione, aggiorniamo il progresso
-                    if (this.transitioning) {
-                        this.transitionProgress++;
-                        
-                        // Transizione completata
-                        if (this.transitionProgress >= this.transitionDuration) {
-                            this.currentEnvironmentIndex = this.nextEnvironmentIndex;
-                            this.currentImage = this.nextImage;
-                            this.transitioning = false;
-                            this.transitionProgress = 0;
-                            this.nextEnvironmentIndex = -1;
-                            this.nextImage = null;
-                        }
-                    }
-                    // Controlla se è ora di cambiare ambiente
-                    else if (this.distance >= this.environmentChangeDistance) {
-                        this.startTransition();
-                        this.distance = 0;
-                    }
-                } catch (e) {
-                    console.error("Errore nell'aggiornamento sfondo:", e);
-                }
-            }
-            
-            // Avvia la transizione al prossimo ambiente
-            startTransition() {
-                try {
-                    // Calcola il prossimo ambiente
-                    this.nextEnvironmentIndex = (this.currentEnvironmentIndex + 1) % this.environments.length;
-                    
-                    // Prepara l'immagine successiva
-                    const nextBgSrc = this.environments[this.nextEnvironmentIndex].background;
-                    this.nextImage = imageCache[nextBgSrc];
-                    
-                    // Se l'immagine non è in cache, caricala
-                    if (!this.nextImage) {
-                        this.nextImage = new Image();
-                        this.nextImage.src = nextBgSrc;
-                        imageCache[nextBgSrc] = this.nextImage;
-                    }
-                    
-                    // Inizia la transizione solo se l'immagine è pronta
-                    if (this.nextImage.complete) {
-                        this.transitioning = true;
-                        this.transitionProgress = 0;
-                        
-                        if (DEBUG_MODE) {
-                            console.log(`Inizia transizione all'ambiente: ${this.environments[this.nextEnvironmentIndex].name}`);
-                        }
-                    } else {
-                        // Se l'immagine non è pronta, riprova al prossimo ciclo
-                        this.nextImage.onload = () => {
-                            this.transitioning = true;
-                            this.transitionProgress = 0;
-                            
-                            if (DEBUG_MODE) {
-                                console.log(`Inizia transizione all'ambiente: ${this.environments[this.nextEnvironmentIndex].name}`);
-                            }
-                        };
-                        
-                        // In caso di errore, annulla la transizione
-                        this.nextImage.onerror = () => {
-                            console.error(`Impossibile caricare l'immagine: ${nextBgSrc}`);
-                            this.nextEnvironmentIndex = -1;
-                            this.nextImage = null;
-                        };
-                    }
-                } catch (e) {
-                    console.error("Errore nell'avvio transizione:", e);
-                    this.transitioning = false;
-                }
-            }
-            
-            // Disegna lo sfondo con transizione
-            draw() {
-                try {
-                    if (!this.currentImage || !this.currentImage.complete) {
-                        // Fallback quando l'immagine non è disponibile
-                        this.ctx.fillStyle = '#000';
-                        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                        return;
-                    }
-                    
-                    // Arrotonda la posizione X per evitare vibrazioni
-                    const x1 = Math.floor(this.x);
-                    const x2 = Math.floor(this.x + this.canvas.width);
-                    
-                    if (this.transitioning && this.nextImage && this.nextImage.complete) {
-                        // Calcola l'opacità della transizione (da 0 a 1)
-                        const opacity = this.transitionProgress / this.transitionDuration;
-                        
-                        // Prima disegna l'immagine corrente
-                        this.ctx.globalAlpha = 1.0;
-                        this.ctx.drawImage(this.currentImage, x1, 0, this.canvas.width, this.canvas.height);
-                        this.ctx.drawImage(this.currentImage, x2, 0, this.canvas.width, this.canvas.height);
-                        
-                        // Poi sovrapponi la nuova con l'opacità calcolata
-                        this.ctx.globalAlpha = opacity;
-                        this.ctx.drawImage(this.nextImage, x1, 0, this.canvas.width, this.canvas.height);
-                        this.ctx.drawImage(this.nextImage, x2, 0, this.canvas.width, this.canvas.height);
-                        
-                        // Resetta l'opacità
-                        this.ctx.globalAlpha = 1.0;
-                    } else {
-                        // Disegno normale senza transizione
-                        this.ctx.drawImage(this.currentImage, x1, 0, this.canvas.width, this.canvas.height);
-                        this.ctx.drawImage(this.currentImage, x2, 0, this.canvas.width, this.canvas.height);
-                    }
-                } catch (e) {
-                    console.error("Errore nel disegno dello sfondo:", e);
-                    // Fallback
-                    this.ctx.fillStyle = '#000';
-                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                }
-            }
-            
-            // Reset dello sfondo
-            reset() {
-                this.x = 0;
-                this.distance = 0;
-                this.currentEnvironmentIndex = 0;
-                this.transitioning = false;
-                this.transitionProgress = 0;
-                this.nextEnvironmentIndex = -1;
-                this.nextImage = null;
-                this.currentImage = imageCache[this.environments[this.currentEnvironmentIndex].background];
-            }
-            
-            // Metodo per ottenere l'ambiente corrente (per compatibilità)
-            get currentEnvironment() {
-                return this.environments[this.currentEnvironmentIndex];
-            }
-        }
-        
-        // Manteniamo il background manager per compatibilità con il resto del codice
-        // ma lo implementiamo con la nuova classe EnhancedBg
-        class BackgroundManager {
-            constructor(canvas, environments) {
-                this.enhancedBg = new EnhancedBg(canvas, environments);
-                this.currentEnvironmentIndex = 0;
-                this.distance = 0;
-                this.environmentChangeDistance = 3000;
-                this.environments = environments;
-            }
-            
-            get currentEnvironment() {
-                return this.enhancedBg.currentEnvironment;
-            }
-            
-            update(speed) {
-                try {
-                    this.enhancedBg.update(speed);
-                    // Aggiorniamo anche le nostre proprietà per compatibilità
-                    this.currentEnvironmentIndex = this.enhancedBg.currentEnvironmentIndex;
-                    this.distance = this.enhancedBg.distance;
-                } catch (e) {
-                    console.error("Errore nell'aggiornamento dello sfondo:", e);
-                }
-            }
-            
-            draw(ctx) {
-                try {
-                    this.enhancedBg.draw();
-                    
-                    // Debug info
-                    if (DEBUG_MODE) {
-                        ctx.fillStyle = 'white';
-                        ctx.font = '14px Arial';
-                        const env = this.environments[this.currentEnvironmentIndex];
-                        ctx.fillText(`Ambiente: ${env.name}`, 10, 40);
-                        ctx.fillText(`Distanza: ${Math.floor(this.distance)}/${this.enhancedBg.environmentChangeDistance}`, 10, 60);
-                        
-                        if (this.enhancedBg.transitioning) {
-                            ctx.fillText(`Transizione: ${Math.floor((this.enhancedBg.transitionProgress / this.enhancedBg.transitionDuration) * 100)}%`, 10, 80);
-                        }
-                    }
-                } catch (e) {
-                    console.error("Errore nel disegno dello sfondo:", e);
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                }
-            }
-            
-            reset() {
-                this.enhancedBg.reset();
-                this.currentEnvironmentIndex = 0;
-                this.distance = 0;
-            }
-        }
-        
-        // Crea il manager dello sfondo
-        let bgManager = null;
-        
-        // ==================== FINE SISTEMA DI SFONDI ====================
-        
         // Costanti del gioco
         const GRAVITY = 0.25;
-        const FLAP_SPEED = -8;     // Velocità del salto
-        const PIPE_SPEED = 2;      // Velocità base dei tubi
-        const PIPE_GAP = 300;      // Spazio tra i tubi
+        const FLAP_SPEED = -8;     // Aumentato per salti più ampi
+        const PIPE_SPEED = 2;
+        const PIPE_GAP = 300;      // Aumentato da 225 a 300 (circa un terzo in più)
         const PIPE_WIDTH = 60;
         
         // Variabili per il controllo del tempo
@@ -877,67 +461,33 @@
         let gameOver = false;
         let score = 0;
         let frames = 0;
+        let bgX = 0; // Posizione X dello sfondo
         
-        // ==================== SISTEMA DI OTTIMIZZAZIONE DELLE PRESTAZIONI ====================
-        
-        // Adatta la qualità del gioco in base alle prestazioni
-        const GameOptimizer = {
-            isLowEndDevice: false,
-            fpsThreshold: 45, // Soglia FPS sotto la quale attiviamo ottimizzazioni
-            checkCount: 0,
-            
-            init() {
-                // Rileva dispositivi a basse prestazioni
-                this.isLowEndDevice = /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
-                
-                if (this.isLowEndDevice) {
-                    if (DEBUG_MODE) {
-                        console.log("Rilevato dispositivo mobile, ottimizzazioni attivate");
-                    }
-                    
-                    // Riduci qualità grafica su dispositivi mobili
-                    this.applyLowQualitySettings();
-                }
-            },
-            
-            applyLowQualitySettings() {
-                // Riduzione degli effetti visivi per migliorare le prestazioni
-                // Queste impostazioni verranno utilizzate nel rendering
-            },
-            
-            // Da chiamare periodicamente per adattare la qualità in base agli FPS
-            adaptQuality(currentFps) {
-                this.checkCount++;
-                
-                // Controlla solo ogni 60 frame (circa 1 secondo a 60fps)
-                if (this.checkCount < 60) return;
-                this.checkCount = 0;
-                
-                if (currentFps < this.fpsThreshold && !this.isLowEndDevice) {
-                    this.isLowEndDevice = true;
-                    this.applyLowQualitySettings();
-                    
-                    if (DEBUG_MODE) {
-                        console.log(`FPS bassi (${currentFps}), ottimizzazioni attivate`);
-                    }
-                }
-            }
+        // Caricamento delle immagini
+        const bgImage = new Image();
+        let bgImageLoaded = false;
+        bgImage.onload = function() {
+            bgImageLoaded = true;
+            console.log("Immagine di sfondo caricata con successo");
         };
-        
-        // Inizializza il GameOptimizer
-        GameOptimizer.init();
+        bgImage.onerror = function() {
+            console.error("Impossibile caricare l'immagine di sfondo");
+            bgImageLoaded = false;
+            // Lo sfondo sarà nero come definito nella funzione drawBackground
+        };
+        bgImage.src = 'bg3.png';
         
         // Caricamento delle immagini del personaggio
         const birdImage1 = new Image(); // Immagine per la discesa
         const birdImage2 = new Image(); // Immagine per la salita
+        let birdImage1Loaded = false;
+        let birdImage2Loaded = false;
         let birdImageRatio = 1; // Rapporto altezza/larghezza dell'immagine
         
         birdImage1.onload = function() {
+            birdImage1Loaded = true;
             birdImageRatio = birdImage1.height / birdImage1.width;
-            
-            if (DEBUG_MODE) {
-                console.log("Immagine del personaggio (discesa) caricata con successo", birdImage1.width, birdImage1.height);
-            }
+            console.log("Immagine del personaggio (discesa) caricata con successo", birdImage1.width, birdImage1.height);
             
             // Aggiorna le dimensioni dell'uccello in base all'immagine caricata
             bird.width = 50; // Larghezza fissa
@@ -946,16 +496,17 @@
         
         birdImage1.onerror = function() {
             console.error("Impossibile caricare l'immagine del personaggio (discesa)");
+            birdImage1Loaded = false;
         };
         
         birdImage2.onload = function() {
-            if (DEBUG_MODE) {
-                console.log("Immagine del personaggio (salita) caricata con successo", birdImage2.width, birdImage2.height);
-            }
+            birdImage2Loaded = true;
+            console.log("Immagine del personaggio (salita) caricata con successo", birdImage2.width, birdImage2.height);
         };
         
         birdImage2.onerror = function() {
             console.error("Impossibile caricare l'immagine del personaggio (salita)");
+            birdImage2Loaded = false;
         };
         
         // Carica inizialmente le immagini di Niko (visto che è il personaggio selezionato di default)
@@ -974,15 +525,15 @@
                 // Determina quale immagine usare in base alla velocità (salita o discesa)
                 const isRising = this.velocity < 0;
                 const currentImage = isRising ? birdImage2 : birdImage1;
-                const imageLoaded = currentImage && currentImage.complete;
+                const imageLoaded = isRising ? birdImage2Loaded : birdImage1Loaded;
                 
                 if (imageLoaded) {
-                    // Disegna l'immagine del personaggio appropriata
+                    // Disegna l'immagine del personaggio appropriata (niko_1.png/niko_2.png o elvio_1.png/elvio_2.png)
                     ctx.save();
                     ctx.translate(this.x, this.y);
                     
                     // Ruota leggermente l'immagine in base alla velocità (per effetto di volo)
-                    // Il fattore 0.02 riduce l'inclinazione
+                    // Il fattore 0.02 invece di 0.05 riduce l'inclinazione di circa il 60%
                     const rotation = this.velocity * 0.02;
                     ctx.rotate(rotation);
                     
@@ -996,7 +547,7 @@
                     );
                     ctx.restore();
                 } else {
-                    // Se l'immagine non è caricata, disegna un cerchio nero come fallback
+                    // Se l'immagine non è caricata, disegna un cerchio nero
                     ctx.fillStyle = '#000000';
                     ctx.beginPath();
                     ctx.arc(this.x, this.y, this.width / 3, 0, Math.PI * 2);
@@ -1111,6 +662,25 @@
             }
         }
         
+        // Funzione di disegno dello sfondo
+        function drawBackground() {
+            // Disegna l'immagine di sfondo se caricata
+            if (bgImageLoaded) {
+                // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
+                ctx.drawImage(bgImage, bgX % canvas.width, 0, canvas.width, canvas.height);
+                ctx.drawImage(bgImage, (bgX % canvas.width) + canvas.width, 0, canvas.width, canvas.height);
+                
+                // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
+                if (Math.abs(bgX) >= canvas.width) {
+                    bgX = bgX % canvas.width;
+                }
+            } else {
+                // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
         // Funzione per disegnare il punteggio
         function drawScore() {
             ctx.fillStyle = '#fff';
@@ -1122,7 +692,7 @@
             ctx.strokeText(score.toString(), canvas.width / 2, 50);
         }
         
-        // Funzione di aggiornamento principale con ottimizzazione mobile
+        // Funzione di aggiornamento principale
         function update(currentTime) {
             // Calcola il delta time (tempo trascorso dall'ultimo frame)
             if (!lastTime) lastTime = currentTime;
@@ -1131,12 +701,6 @@
             
             // Limita deltaTime per evitare comportamenti strani quando la tab è in background
             const dt = Math.min(deltaTime, 3);
-            
-            // Aggiorna FPS per la diagnostica e l'ottimizzazione
-            const currentFps = Performance.update();
-            
-            // Adatta la qualità grafica in base agli FPS
-            GameOptimizer.adaptQuality(currentFps);
             
             // Conta i frame normalizzati per la generazione dei tubi
             if (gameStarted && !gameOver) {
@@ -1159,16 +723,9 @@
                 }
             }
             
-            // Aggiorna lo sfondo con una velocità molto stabile
-            try {
-                if (bgManager) {
-                    // Velocità ridotta e fissa per evitare problemi di vibrazione
-                    // Utilizziamo un valore intero piccolo per massima stabilità
-                    const bgSpeed = 1; 
-                    bgManager.update(bgSpeed);
-                }
-            } catch (e) {
-                console.error("Errore nell'aggiornamento dello sfondo:", e);
+            // Aggiorna lo sfondo in base al tempo
+            if (gameStarted && !gameOver) {
+                bgX -= 1.5 * dt; // Velocità aumentata da 0.5 a 1.5 (triplicata)
             }
             
             // Incrementa il contatore dei frame
@@ -1180,21 +737,8 @@
             // Pulisci il canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Disegna lo sfondo in modo più sicuro
-            try {
-                if (bgManager) {
-                    bgManager.draw(ctx);
-                } else {
-                    // Fallback se il background manager non è pronto
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                }
-            } catch (e) {
-                console.error("Errore nel disegno dello sfondo:", e);
-                // Fallback in caso di errore
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
+            // Disegna lo sfondo
+            drawBackground();
             
             // Disegna i tubi
             pipes.forEach(pipe => pipe.draw());
@@ -1206,14 +750,10 @@
             if (gameStarted) {
                 drawScore();
             }
-            
-            // Mostra FPS se in modalità debug
-            Performance.showFPS(ctx);
         }
         
         // Funzione di gioco principale
         let lastFrameTime = 0;
-        let animationFrameId = null;
         
         function gameLoop(currentTime) {
             // Calcola il tempo trascorso dall'ultimo frame (più stabile)
@@ -1221,12 +761,10 @@
                 lastFrameTime = currentTime;
             }
             
-            // Framerate throttling per dispositivi mobili a basse prestazioni
+            // Limita FPS su iPad per migliorare la stabilità
             const elapsed = currentTime - lastFrameTime;
-            const targetFrameTime = GameOptimizer.isLowEndDevice ? 20 : 16; // 50fps o 60fps
-            
-            if (elapsed < targetFrameTime) {
-                animationFrameId = requestAnimationFrame(gameLoop);
+            if (/iPad/.test(navigator.userAgent) && elapsed < 16) { // circa 60 FPS
+                requestAnimationFrame(gameLoop);
                 return;
             }
             
@@ -1234,7 +772,7 @@
             
             update(currentTime);
             draw();
-            animationFrameId = requestAnimationFrame(gameLoop);
+            requestAnimationFrame(gameLoop);
         }
         
         // Variabile per tenere traccia dell'intervallo di fade audio
@@ -1267,11 +805,6 @@
                     }
                 }, 100);
             }
-            
-            // Libera memoria cancellando l'animation frame
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-            }
         }
         
         // Funzione per iniziare il gioco
@@ -1282,27 +815,10 @@
             score = 0;
             frames = 0;
             pipeCounter = 0;
+            bgX = 0; // Resetta la posizione dello sfondo
             bird.reset();
             pipes.length = 0;  // Svuota l'array dei tubi
             lastTime = 0;      // Resetta il tempo dell'ultimo frame
-            
-            // Inizializza o resetta il background manager in modo più sicuro
-            try {
-                if (!bgManager) {
-                    bgManager = new BackgroundManager(canvas, environments);
-                } else {
-                    bgManager.reset();
-                }
-            } catch (e) {
-                console.error("Errore nell'inizializzazione dello sfondo:", e);
-                // Creiamo un nuovo manager come fallback
-                try {
-                    bgManager = new BackgroundManager(canvas, environments);
-                } catch (e2) {
-                    console.error("Impossibile creare il background manager:", e2);
-                    bgManager = null; // Useremo il fallback nero in draw()
-                }
-            }
             
             // Avvia la musica quando il gioco inizia (solo se l'audio è abilitato)
             if (audioEnabled) {
@@ -1315,15 +831,12 @@
                 setTimeout(() => {
                     soundtrack.play().catch(e => {
                         console.error("Errore durante la riproduzione audio:", e);
+                        // In alcuni browser, l'audio può essere riprodotto solo dopo un'interazione dell'utente
+                        // Poiché stiamo già rispondendo a un'interazione (click sul pulsante Start), 
+                        // questo non dovrebbe essere un problema, ma gestiamo comunque l'errore
                     });
                 }, 50);
             }
-            
-            // Avvia il game loop
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-            }
-            animationFrameId = requestAnimationFrame(gameLoop);
         }
         
         // Funzione per tornare alla schermata home
@@ -1351,12 +864,6 @@
             
             // Mostra la schermata iniziale
             startScreen.style.display = 'flex';
-            
-            // Cancella l'animation frame per risparmiare risorse
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
-            }
         }
         
         // Funzione per ricominciare il gioco
@@ -1388,25 +895,14 @@
             }
         });
         
-        // Event listener ottimizzato per dispositivi touch
-        let touchStarted = false;
-        
+        // Event listener per il tocco su mobile
         canvas.addEventListener('touchstart', function(e) {
             e.preventDefault(); // Previene lo zoom o altre azioni del browser
-            
-            // Evita doppi eventi touch
-            if (touchStarted) return;
-            touchStarted = true;
-            
             if (!gameStarted) {
                 startGame();
             }
             bird.flap();
         }, { passive: false });
-        
-        canvas.addEventListener('touchend', function() {
-            touchStarted = false;
-        }, { passive: true });
         
         canvas.addEventListener('click', function(e) {
             if (!gameStarted) {
@@ -1415,23 +911,8 @@
             bird.flap();
         });
         
-        // Funzione per prevenire il pinch-to-zoom su dispositivi iOS
-        document.addEventListener('gesturestart', function(e) {
-            e.preventDefault();
-        }, { passive: false });
-        
-        // Funzione per prevenire lo scroll del documento
-        document.body.addEventListener('touchmove', function(e) {
-            if (gameStarted) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-        
-        // Precarica le immagini e poi inizializza il gioco
-        preloadImages();
-        
         // Avvia il game loop con il timestamp corrente
-        animationFrameId = requestAnimationFrame(gameLoop);
+        requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
