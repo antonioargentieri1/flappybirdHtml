@@ -463,19 +463,34 @@
         let frames = 0;
         let bgX = 0; // Posizione X dello sfondo
         
-        // Caricamento delle immagini
-        const bgImage = new Image();
-        let bgImageLoaded = false;
-        bgImage.onload = function() {
-            bgImageLoaded = true;
-            console.log("Immagine di sfondo caricata con successo");
+        // Variabile per tracciare se è apparso il primo tubo
+        let firstPipeAppeared = false;
+        
+        // Caricamento delle immagini di sfondo
+        const bgImage1 = new Image();
+        const bgImage2 = new Image();
+        let bgImage1Loaded = false;
+        let bgImage2Loaded = false;
+
+        bgImage1.onload = function() {
+            bgImage1Loaded = true;
+            console.log("Immagine di sfondo 1 caricata con successo");
         };
-        bgImage.onerror = function() {
-            console.error("Impossibile caricare l'immagine di sfondo");
-            bgImageLoaded = false;
-            // Lo sfondo sarà nero come definito nella funzione drawBackground
+        bgImage1.onerror = function() {
+            console.error("Impossibile caricare l'immagine di sfondo 1");
+            bgImage1Loaded = false;
         };
-        bgImage.src = 'bg1.png';
+        bgImage1.src = 'bg1.png';
+
+        bgImage2.onload = function() {
+            bgImage2Loaded = true;
+            console.log("Immagine di sfondo 2 caricata con successo");
+        };
+        bgImage2.onerror = function() {
+            console.error("Impossibile caricare l'immagine di sfondo 2");
+            bgImage2Loaded = false;
+        };
+        bgImage2.src = 'bg2.png';
         
         // Caricamento delle immagini del personaggio
         const birdImage1 = new Image(); // Immagine per la discesa
@@ -662,20 +677,88 @@
             }
         }
         
-        // Funzione di disegno dello sfondo
+        // Funzione di disegno dello sfondo con bg1 e bg2 che si susseguono orizzontalmente
         function drawBackground() {
-            // Disegna l'immagine di sfondo se caricata
-            if (bgImageLoaded) {
-                // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
-                ctx.drawImage(bgImage, bgX % canvas.width, 0, canvas.width, canvas.height);
-                ctx.drawImage(bgImage, (bgX % canvas.width) + canvas.width, 0, canvas.width, canvas.height);
+            // Ottieni le dimensioni del canvas
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            
+            // Verifica se entrambe le immagini di sfondo sono caricate
+            if (bgImage1Loaded && bgImage2Loaded) {
+                // Calcoliamo le dimensioni proporzionali delle immagini
+                // Assumiamo che entrambe abbiano lo stesso rapporto per semplicità
+                const bgRatio = bgImage1.width / bgImage1.height;
+                const canvasRatio = canvasWidth / canvasHeight;
                 
-                // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
-                if (Math.abs(bgX) >= canvas.width) {
-                    bgX = bgX % canvas.width;
+                let drawWidth, drawHeight, offsetX, offsetY;
+                
+                // Determiniamo le dimensioni per entrambe le immagini (assumendo stesso rapporto)
+                if (bgRatio > canvasRatio) {
+                    drawHeight = canvasHeight;
+                    drawWidth = drawHeight * bgRatio;
+                    offsetX = (canvasWidth - drawWidth) / 2;
+                    offsetY = 0;
+                } else {
+                    drawWidth = canvasWidth;
+                    drawHeight = drawWidth / bgRatio;
+                    offsetX = 0;
+                    offsetY = (canvasHeight - drawHeight) / 2;
+                }
+                
+                // Se il primo tubo è apparso, iniziamo a disegnare bg2 a destra del bg1
+                if (firstPipeAppeared) {
+                    // Disegniamo bg1 come prima immagine che scorre
+                    ctx.drawImage(bgImage1, bgX + offsetX, offsetY, drawWidth, drawHeight);
+                    
+                    // Disegniamo bg2 subito dopo bg1
+                    ctx.drawImage(bgImage2, bgX + offsetX + drawWidth, offsetY, drawWidth, drawHeight);
+                    
+                    // Aggiungiamo una seconda copia di bg1 e bg2 per coprire lo schermo quando scorrono
+                    ctx.drawImage(bgImage1, bgX + offsetX + (drawWidth * 2), offsetY, drawWidth, drawHeight);
+                    ctx.drawImage(bgImage2, bgX + offsetX + (drawWidth * 3), offsetY, drawWidth, drawHeight);
+                    
+                    // Se lo sfondo è scorso così tanto che bg1 è completamente fuori dallo schermo
+                    if (Math.abs(bgX) >= drawWidth) {
+                        // Resettiamo la posizione per creare un ciclo infinito di bg1 e bg2 che si susseguono
+                        bgX = bgX % (drawWidth * 2);
+                    }
+                } else {
+                    // Se il primo tubo non è ancora apparso, mostriamo solo bg1 ripetuto
+                    ctx.drawImage(bgImage1, bgX + offsetX, offsetY, drawWidth, drawHeight);
+                    ctx.drawImage(bgImage1, bgX + offsetX + drawWidth, offsetY, drawWidth, drawHeight);
+                    
+                    // Se la prima immagine è completamente fuori dallo schermo, resetta la posizione
+                    if (Math.abs(bgX) >= drawWidth) {
+                        bgX = bgX % drawWidth;
+                    }
+                }
+            } else if (bgImage1Loaded) {
+                // Se solo bg1 è caricato, mostriamo solo bg1
+                const bgRatio = bgImage1.width / bgImage1.height;
+                const canvasRatio = canvasWidth / canvasHeight;
+                
+                let drawWidth, drawHeight, offsetX, offsetY;
+                
+                if (bgRatio > canvasRatio) {
+                    drawHeight = canvasHeight;
+                    drawWidth = drawHeight * bgRatio;
+                    offsetX = (canvasWidth - drawWidth) / 2;
+                    offsetY = 0;
+                } else {
+                    drawWidth = canvasWidth;
+                    drawHeight = drawWidth / bgRatio;
+                    offsetX = 0;
+                    offsetY = (canvasHeight - drawHeight) / 2;
+                }
+                
+                ctx.drawImage(bgImage1, bgX + offsetX, offsetY, drawWidth, drawHeight);
+                ctx.drawImage(bgImage1, bgX + offsetX + drawWidth, offsetY, drawWidth, drawHeight);
+                
+                if (Math.abs(bgX) >= drawWidth) {
+                    bgX = bgX % drawWidth;
                 }
             } else {
-                // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
+                // Se nessuna immagine di sfondo è caricata, usa uno sfondo nero
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
@@ -707,6 +790,13 @@
                 pipeCounter += dt;
                 if (pipeCounter >= pipeInterval) { // Genera un tubo ogni pipeInterval frame normalizzati
                     pipes.push(new Pipe());
+                    
+                    // Imposta firstPipeAppeared a true dopo la generazione del primo tubo
+                    if (!firstPipeAppeared && pipes.length > 0) {
+                        firstPipeAppeared = true;
+                        console.log("Primo tubo apparso, cambio sfondo a bg2");
+                    }
+                    
                     pipeCounter = 0;
                 }
             }
@@ -816,6 +906,7 @@
             frames = 0;
             pipeCounter = 0;
             bgX = 0; // Resetta la posizione dello sfondo
+            firstPipeAppeared = false; // Resetta lo stato del cambio sfondo
             bird.reset();
             pipes.length = 0;  // Svuota l'array dei tubi
             lastTime = 0;      // Resetta il tempo dell'ultimo frame
