@@ -424,6 +424,34 @@
             soundtrack.load();
             soundtrack.volume = 1.0;
             console.log("Audio precaricato");
+            
+            // Proviamo a inizializzare l'audio per evitare ritardi al primo play
+            const silentPlay = function() {
+                // Salva il volume attuale
+                const currentVolume = soundtrack.volume;
+                
+                // Imposta il volume a 0 per una riproduzione silenziosa
+                soundtrack.volume = 0;
+                
+                // Prova a riprodurre brevemente per inizializzare il sistema audio
+                soundtrack.play().then(() => {
+                    // Ferma subito la riproduzione
+                    setTimeout(() => {
+                        soundtrack.pause();
+                        soundtrack.currentTime = 0;
+                        // Ripristina il volume originale
+                        soundtrack.volume = currentVolume;
+                        console.log("Audio inizializzato con successo");
+                    }, 50);
+                }).catch(e => {
+                    console.log("Inizializzazione audio rimandata alla prima interazione", e);
+                    // Ripristina il volume in caso di errore
+                    soundtrack.volume = currentVolume;
+                });
+            };
+            
+            // Proviamo a inizializzare dopo un breve ritardo
+            setTimeout(silentPlay, 1000);
         });
         
         // Gestione audio
@@ -545,7 +573,7 @@
                 target: bgImages[targetBackgroundIndex],
                 progress: transitionProgress
              };
-}    
+        }    
         // Caricamento delle immagini del personaggio
         const birdImage1 = new Image(); // Immagine per la discesa
         const birdImage2 = new Image(); // Immagine per la salita
@@ -949,22 +977,20 @@ function drawBackground() {
             pipes.length = 0;  // Svuota l'array dei tubi
             lastTime = 0;      // Resetta il tempo dell'ultimo frame
             
-            // Avvia la musica quando il gioco inizia (solo se l'audio è abilitato)
+            // Avvia la musica immediatamente quando il gioco inizia (solo se l'audio è abilitato)
             if (audioEnabled) {
                 // Ferma l'audio prima se sta ancora riproducendo
                 soundtrack.pause();
                 soundtrack.currentTime = 0; // Riavvia dall'inizio
                 soundtrack.volume = 1.0;    // Assicurati che il volume sia al massimo
                 
-                // Piccolo timeout per assicurarsi che tutti i cambiamenti audio siano applicati
-                setTimeout(() => {
-                    soundtrack.play().catch(e => {
-                        console.error("Errore durante la riproduzione audio:", e);
-                        // In alcuni browser, l'audio può essere riprodotto solo dopo un'interazione dell'utente
-                        // Poiché stiamo già rispondendo a un'interazione (click sul pulsante Start), 
-                        // questo non dovrebbe essere un problema, ma gestiamo comunque l'errore
-                    });
-                }, 50);
+                // Riproduci immediatamente l'audio senza timeout
+                soundtrack.play().catch(e => {
+                    console.error("Errore durante la riproduzione audio:", e);
+                    // In alcuni browser, l'audio può essere riprodotto solo dopo un'interazione dell'utente
+                    // Poiché stiamo già rispondendo a un'interazione (click sul pulsante Start), 
+                    // questo non dovrebbe essere un problema, ma gestiamo comunque l'errore
+                });
             }
         }
         
