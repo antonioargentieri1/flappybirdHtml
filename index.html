@@ -354,7 +354,7 @@
         // Variabile per tenere traccia del personaggio selezionato
         let selectedCharacter = 0;
         
-        // Configurazione dei personaggi (NUOVO)
+        // Configurazione dei personaggi
         const characters = [
             { 
                 name: "Niko",
@@ -398,7 +398,7 @@
             });
         });
         
-        // Funzione per caricare le immagini del personaggio selezionato (NUOVO)
+        // Funzione per caricare le immagini del personaggio selezionato
         function loadCharacterImages() {
             // Determina quale personaggio usare (Niko o Elvio)
             // Se il personaggio selezionato è 0, usa Niko, altrimenti usa Elvio
@@ -474,6 +474,12 @@
             { src: 'bg3.PNG', minScore: 4, maxScore: 100, image: new Image(), loaded: false }
         ];
 
+        // Variabili per la transizione degli sfondi
+        let currentBgIndex = 0;
+        let nextBgIndex = 1;
+        let transitionTriggered = false;
+        let transitionX = 0;
+
         // Carica tutte le immagini
         let bgImagesLoaded = 0;
         bgImages.forEach((bg, index) => {
@@ -501,17 +507,6 @@
             bg.image.src = bg.src;
         });
 
-        // Funzione per ottenere l'immagine di sfondo corrente in base al punteggio
-        function getCurrentBackground() {
-            for (let i = 0; i < bgImages.length; i++) {
-                if (score >= bgImages[i].minScore && score < bgImages[i].maxScore) {
-                    return bgImages[i];
-                }
-            }
-            // Fallback all'ultimo sfondo se nessuno corrisponde (non dovrebbe mai accadere)
-            return bgImages[bgImages.length - 1];
-        }
-        
         // Caricamento delle immagini del personaggio
         const birdImage1 = new Image(); // Immagine per la discesa
         const birdImage2 = new Image(); // Immagine per la salita
@@ -697,12 +692,19 @@
             }
         }
         
-        // Funzione di disegno dello sfondo
+        // Funzione di disegno dello sfondo migliorata per transizioni continue
         function drawBackground() {
-            // Ottieni lo sfondo corrente in base al punteggio
-            const currentBg = getCurrentBackground();
+            // Verifica se è necessario avviare la transizione allo sfondo successivo in base al punteggio
+            if (!transitionTriggered && score >= bgImages[currentBgIndex].maxScore && currentBgIndex < bgImages.length - 1) {
+                transitionTriggered = true;
+                nextBgIndex = currentBgIndex + 1;
+                transitionX = canvas.width; // Posiziona lo sfondo successivo fuori dallo schermo a destra
+            }
             
-            // Disegna l'immagine di sfondo se caricata
+            // Ottieni lo sfondo corrente
+            const currentBg = bgImages[currentBgIndex];
+            
+            // Disegna lo sfondo corrente se caricato
             if (currentBg.loaded) {
                 // Usa il rapporto d'aspetto dell'immagine corrente
                 const currentRatio = currentBg.ratio;
@@ -729,6 +731,38 @@
                 ctx.drawImage(currentBg.image, bgX % bgWidth, yOffset, bgWidth, bgHeight);
                 ctx.drawImage(currentBg.image, (bgX % bgWidth) + bgWidth, yOffset, bgWidth, bgHeight);
                 
+                // Se è in corso una transizione, disegna anche lo sfondo successivo
+                if (transitionTriggered && nextBgIndex < bgImages.length) {
+                    const nextBg = bgImages[nextBgIndex];
+                    if (nextBg.loaded) {
+                        const nextRatio = nextBg.ratio || currentRatio;
+                        
+                        // Calcola le dimensioni per lo sfondo successivo
+                        let nextBgWidth, nextBgHeight, nextYOffset = 0;
+                        
+                        if (canvas.width / canvas.height > nextRatio) {
+                            nextBgWidth = canvas.width;
+                            nextBgHeight = nextBgWidth * nextRatio;
+                            nextYOffset = (canvas.height - nextBgHeight) / 2;
+                        } else {
+                            nextBgHeight = canvas.height;
+                            nextBgWidth = nextBgHeight / nextRatio;
+                            nextYOffset = 0;
+                        }
+                        
+                        // Disegna lo sfondo successivo con l'offset di transizione
+                        ctx.drawImage(nextBg.image, transitionX, nextYOffset, nextBgWidth, nextBgHeight);
+                        ctx.drawImage(nextBg.image, transitionX + nextBgWidth, nextYOffset, nextBgWidth, nextBgHeight);
+                        
+                        // Se la transizione è completata, rendi lo sfondo successivo quello corrente
+                        if (transitionX <= 0) {
+                            currentBgIndex = nextBgIndex;
+                            transitionTriggered = false;
+                            bgX = 0; // Resetta la posizione dello sfondo
+                        }
+                    }
+                }
+                
                 // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
                 if (Math.abs(bgX) >= bgWidth) {
                     bgX = bgX % bgWidth;
@@ -744,6 +778,19 @@
                 // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        // Funzione per aggiornare lo sfondo e gestire la transizione
+        function updateBackground(dt) {
+            // Aggiorna lo scorrimento regolare dello sfondo
+            if (gameStarted && !gameOver) {
+                bgX -= 1.5 * dt;
+            }
+            
+            // Gestisci la transizione dello sfondo se necessaria
+            if (transitionTriggered) {
+                transitionX -= 1.5 * dt;
             }
         }
         
@@ -789,10 +836,8 @@
                 }
             }
             
-            // Aggiorna lo sfondo in base al tempo
-            if (gameStarted && !gameOver) {
-                bgX -= 1.5 * dt; // Velocità aumentata da 0.5 a 1.5 (triplicata)
-            }
+            // Aggiorna lo sfondo e la transizione
+            updateBackground(dt);
             
             // Incrementa il contatore dei frame
             frames++;
@@ -882,6 +927,10 @@
             frames = 0;
             pipeCounter = 0;
             bgX = 0; // Resetta la posizione dello sfondo
+            currentBgIndex = 0; // Resetta all'indice dello sfondo iniziale
+            nextBgIndex = 1; // Imposta il prossimo sfondo all'indice 1
+            transitionTriggered = false; // Resetta lo stato della transizione
+            transitionX = 0; // Resetta la posizione di transizione
             bird.reset();
             pipes.length = 0;  // Svuota l'array dei tubi
             lastTime = 0;      // Resetta il tempo dell'ultimo frame
@@ -927,6 +976,13 @@
             score = 0;
             pipes.length = 0;
             bird.reset();
+            
+            // Resetta anche le variabili dello sfondo
+            currentBgIndex = 0;
+            nextBgIndex = 1;
+            transitionTriggered = false;
+            transitionX = 0;
+            bgX = 0;
             
             // Mostra la schermata iniziale
             startScreen.style.display = 'flex';
