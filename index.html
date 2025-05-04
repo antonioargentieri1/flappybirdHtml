@@ -467,22 +467,50 @@
         let bgX = 0; // Posizione X dello sfondo
         let bgImageRatio = 16/9; // Rapporto predefinito (verrà aggiornato quando l'immagine è caricata)
         
-        // Caricamento delle immagini
-        const bgImage = new Image();
-        let bgImageLoaded = false;
-        bgImage.onload = function() {
-            bgImageLoaded = true;
-            console.log("Immagine di sfondo caricata con successo", bgImage.width, bgImage.height);
-            // Salva il rapporto d'aspetto originale dell'immagine
-            // Se non ci sono dati sulle dimensioni, usa 16:9 come predefinito
-            bgImageRatio = bgImage.height / bgImage.width || 9/16;
-        };
-        bgImage.onerror = function() {
-            console.error("Impossibile caricare l'immagine di sfondo");
-            bgImageLoaded = false;
-            // Lo sfondo sarà nero come definito nella funzione drawBackground
-        };
-        bgImage.src = 'bg3.PNG';
+        // Array di immagini di sfondo
+        const bgImages = [
+            { src: 'bg1.png', minScore: 0, maxScore: 2, image: new Image(), loaded: false },
+            { src: 'bg2.PNG', minScore: 2, maxScore: 4, image: new Image(), loaded: false },
+            { src: 'bg3.PNG', minScore: 4, maxScore: 100, image: new Image(), loaded: false }
+        ];
+
+        // Carica tutte le immagini
+        let bgImagesLoaded = 0;
+        bgImages.forEach((bg, index) => {
+            bg.image.onload = function() {
+                bg.loaded = true;
+                bgImagesLoaded++;
+                console.log(`Immagine di sfondo ${index + 1} caricata con successo`, bg.image.width, bg.image.height);
+                
+                // Salva il rapporto d'aspetto di ogni immagine
+                bg.ratio = bg.image.height / bg.image.width || 9/16;
+                
+                // Quando tutte le immagini sono caricate, imposta il rapporto d'aspetto iniziale
+                if (bgImagesLoaded === bgImages.length) {
+                    // Usa il rapporto della prima immagine come predefinito
+                    bgImageRatio = bgImages[0].ratio;
+                    console.log("Tutte le immagini di sfondo sono state caricate");
+                }
+            };
+            
+            bg.image.onerror = function() {
+                console.error(`Impossibile caricare l'immagine di sfondo ${index + 1}: ${bg.src}`);
+                bg.loaded = false;
+            };
+            
+            bg.image.src = bg.src;
+        });
+
+        // Funzione per ottenere l'immagine di sfondo corrente in base al punteggio
+        function getCurrentBackground() {
+            for (let i = 0; i < bgImages.length; i++) {
+                if (score >= bgImages[i].minScore && score < bgImages[i].maxScore) {
+                    return bgImages[i];
+                }
+            }
+            // Fallback all'ultimo sfondo se nessuno corrisponde (non dovrebbe mai accadere)
+            return bgImages[bgImages.length - 1];
+        }
         
         // Caricamento delle immagini del personaggio
         const birdImage1 = new Image(); // Immagine per la discesa
@@ -671,29 +699,35 @@
         
         // Funzione di disegno dello sfondo
         function drawBackground() {
+            // Ottieni lo sfondo corrente in base al punteggio
+            const currentBg = getCurrentBackground();
+            
             // Disegna l'immagine di sfondo se caricata
-            if (bgImageLoaded) {
+            if (currentBg.loaded) {
+                // Usa il rapporto d'aspetto dell'immagine corrente
+                const currentRatio = currentBg.ratio;
+                
                 // Calcola le dimensioni per mantenere il rapporto d'aspetto originale dell'immagine
                 let bgWidth, bgHeight, yOffset = 0;
                 
                 // Determinazione delle dimensioni mantenendo il rapporto originale
-                if (canvas.width / canvas.height > bgImageRatio) {
+                if (canvas.width / canvas.height > currentRatio) {
                     // Se il canvas è più largo rispetto al rapporto dell'immagine
                     bgWidth = canvas.width;
-                    bgHeight = bgWidth * bgImageRatio;
+                    bgHeight = bgWidth * currentRatio;
                     // Calcola l'offset verticale per centrare l'immagine
                     yOffset = (canvas.height - bgHeight) / 2;
                 } else {
                     // Se il canvas è più alto rispetto al rapporto dell'immagine
                     bgHeight = canvas.height;
-                    bgWidth = bgHeight / bgImageRatio;
+                    bgWidth = bgHeight / currentRatio;
                     // In questo caso non è necessario l'offset verticale
                     yOffset = 0;
                 }
                 
                 // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
-                ctx.drawImage(bgImage, bgX % bgWidth, yOffset, bgWidth, bgHeight);
-                ctx.drawImage(bgImage, (bgX % bgWidth) + bgWidth, yOffset, bgWidth, bgHeight);
+                ctx.drawImage(currentBg.image, bgX % bgWidth, yOffset, bgWidth, bgHeight);
+                ctx.drawImage(currentBg.image, (bgX % bgWidth) + bgWidth, yOffset, bgWidth, bgHeight);
                 
                 // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
                 if (Math.abs(bgX) >= bgWidth) {
