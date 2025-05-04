@@ -219,11 +219,32 @@
         #audio-toggle:hover {
             background-color: rgba(0, 0, 0, 0.7);
         }
+
+        /* Stile per il contatore dei collezionabili */
+        .collectibles-counter {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 24px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            z-index: 5;
+        }
+
+        .collectibles-icon {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
     <div id="game-container">
         <canvas id="game-canvas" width="360" height="640"></canvas>
+        
+        <!-- Rimuovo il contatore esterno dei collezionabili -->
         
         <div id="start-screen">
             <h1>ONLYOUCAN</h1>
@@ -273,6 +294,7 @@
         <div id="game-over">
             <h1>Game Over</h1>
             <p class="score" id="final-score">Punteggio: 0</p>
+            <p class="score" id="final-collectibles">Peroni raccolte: 0</p>
             <button id="restart-button">Riprova</button>
             <button id="home-button">Torna alla Home</button>
         </div>
@@ -338,6 +360,9 @@
         const restartButton = document.getElementById('restart-button');
         const homeButton = document.getElementById('home-button');
         const finalScoreElement = document.getElementById('final-score');
+        const finalCollectiblesElement = document.getElementById('final-collectibles');
+        const collectiblesCounterElement = document.getElementById('collectibles-counter');
+        const collectiblesCountElement = document.getElementById('collectibles-count');
         const spotifyButton = document.getElementById('spotify-button');
         
         // Elementi audio
@@ -458,6 +483,76 @@
         const frameTime = 1000 / FPS;
         let pipeCounter = 0;
         let pipeInterval = 200;    // Intervallo tra i tubi (valore più alto = tubi più distanti)
+        
+        // Variabili per i collezionabili
+        let collectiblesCount = 0;
+        let collectiblesCounter = 0;
+        const COLLECTIBLE_INTERVAL = 150; // Intervallo tra i collezionabili
+        const collectibles = [];
+        const collectibleImage = new Image();
+        collectibleImage.src = 'peroni.png';
+        let collectibleImageLoaded = false;
+        
+        collectibleImage.onload = function() {
+            collectibleImageLoaded = true;
+            console.log("Immagine del collezionabile caricata con successo");
+        };
+        
+        collectibleImage.onerror = function() {
+            console.error("Impossibile caricare l'immagine del collezionabile");
+            collectibleImageLoaded = false;
+        };
+        
+        // Classe per i collezionabili
+        class Collectible {
+            constructor() {
+                this.x = canvas.width;
+                this.y = Math.random() * (canvas.height - 100) + 50; // Posizione casuale nell'altezza del canvas
+                this.width = 40;
+                this.height = 40;
+                this.collected = false;
+            }
+            
+            draw() {
+                if (collectibleImageLoaded && !this.collected) {
+                    ctx.drawImage(collectibleImage, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+                }
+            }
+            
+            update(dt) {
+                if (gameStarted && !gameOver && !this.collected) {
+                    this.x -= PIPE_SPEED * dt;
+                    
+                    // Controllo collisione con l'uccello
+                    if (this.checkCollision()) {
+                        this.collected = true;
+                        collectiblesCount++;
+                    }
+                }
+            }
+            
+            checkCollision() {
+                // Calcolo dei bordi dell'uccello
+                const birdLeft = bird.x - bird.width / 3;
+                const birdRight = bird.x + bird.width / 3;
+                const birdTop = bird.y - bird.height / 3;
+                const birdBottom = bird.y + bird.height / 3;
+                
+                // Calcolo dei bordi del collezionabile
+                const collectibleLeft = this.x - this.width / 2;
+                const collectibleRight = this.x + this.width / 2;
+                const collectibleTop = this.y - this.height / 2;
+                const collectibleBottom = this.y + this.height / 2;
+                
+                // Controllo collisione
+                return (
+                    birdRight > collectibleLeft && 
+                    birdLeft < collectibleRight && 
+                    birdBottom > collectibleTop && 
+                    birdTop < collectibleBottom
+                );
+            }
+        }
         
         // Variabili di stato del gioco
         let gameStarted = false;
@@ -796,6 +891,7 @@
         
         // Funzione per disegnare il punteggio
         function drawScore() {
+            // Disegna il punteggio principale
             ctx.fillStyle = '#fff';
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
@@ -803,6 +899,19 @@
             ctx.textAlign = 'center';
             ctx.fillText(score.toString(), canvas.width / 2, 50);
             ctx.strokeText(score.toString(), canvas.width / 2, 50);
+            
+            // Disegna il contatore di collezionabili
+            if (collectibleImageLoaded) {
+                // Disegna l'icona del collezionabile
+                const iconSize = 30;
+                ctx.drawImage(collectibleImage, 20, 20, iconSize, iconSize);
+                
+                // Disegna il conteggio
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(collectiblesCount.toString(), iconSize + 30, 42);
+                ctx.strokeText(collectiblesCount.toString(), iconSize + 30, 42);
+            }
         }
         
         // Funzione di aggiornamento principale
@@ -815,12 +924,20 @@
             // Limita deltaTime per evitare comportamenti strani quando la tab è in background
             const dt = Math.min(deltaTime, 3);
             
-            // Conta i frame normalizzati per la generazione dei tubi
+            // Conta i frame normalizzati per la generazione dei tubi e dei collezionabili
             if (gameStarted && !gameOver) {
+                // Generazione tubi
                 pipeCounter += dt;
                 if (pipeCounter >= pipeInterval) { // Genera un tubo ogni pipeInterval frame normalizzati
                     pipes.push(new Pipe());
                     pipeCounter = 0;
+                }
+                
+                // Generazione collezionabili
+                collectiblesCounter += dt;
+                if (collectiblesCounter >= COLLECTIBLE_INTERVAL) { // Genera un collezionabile ogni COLLECTIBLE_INTERVAL frame normalizzati
+                    collectibles.push(new Collectible());
+                    collectiblesCounter = 0;
                 }
             }
             
@@ -833,6 +950,15 @@
                 
                 if (pipes[i].x + PIPE_WIDTH < 0) {
                     pipes.splice(i, 1);
+                }
+            }
+            
+            // Aggiorna i collezionabili e rimuovi quelli fuori dallo schermo
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                collectibles[i].update(dt);
+                
+                if (collectibles[i].x + collectibles[i].width / 2 < 0) {
+                    collectibles.splice(i, 1);
                 }
             }
             
@@ -853,6 +979,9 @@
             
             // Disegna i tubi
             pipes.forEach(pipe => pipe.draw());
+            
+            // Disegna i collezionabili
+            collectibles.forEach(collectible => collectible.draw());
             
             // Disegna l'uccello
             bird.draw();
@@ -893,6 +1022,7 @@
         function endGame() {
             gameOver = true;
             finalScoreElement.textContent = `Punteggio: ${score}`;
+            finalCollectiblesElement.textContent = `Peroni raccolte: ${collectiblesCount}`;
             gameOverScreen.style.display = 'flex';
             
             // Ferma la musica quando il gioco termina o riduci il volume gradualmente
@@ -926,6 +1056,8 @@
             score = 0;
             frames = 0;
             pipeCounter = 0;
+            collectiblesCount = 0;
+            collectiblesCounter = 0;
             bgX = 0; // Resetta la posizione dello sfondo
             currentBgIndex = 0; // Resetta all'indice dello sfondo iniziale
             nextBgIndex = 1; // Imposta il prossimo sfondo all'indice 1
@@ -933,6 +1065,7 @@
             transitionX = 0; // Resetta la posizione di transizione
             bird.reset();
             pipes.length = 0;  // Svuota l'array dei tubi
+            collectibles.length = 0; // Svuota l'array dei collezionabili
             lastTime = 0;      // Resetta il tempo dell'ultimo frame
             
             // Avvia la musica quando il gioco inizia (solo se l'audio è abilitato)
@@ -974,7 +1107,9 @@
             gameStarted = false;
             gameOver = false;
             score = 0;
+            collectiblesCount = 0;
             pipes.length = 0;
+            collectibles.length = 0;
             bird.reset();
             
             // Resetta anche le variabili dello sfondo
