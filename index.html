@@ -473,6 +473,11 @@
             { src: 'bg2.PNG', minScore: 2, maxScore: 4, image: new Image(), loaded: false },
             { src: 'bg3.PNG', minScore: 4, maxScore: 100, image: new Image(), loaded: false }
         ];
+            // Variabili per la transizione dello sfondo
+        let currentBackgroundIndex = 0;      // Indice dello sfondo corrente
+        let targetBackgroundIndex = 0;       // Indice dello sfondo a cui stiamo facendo la transizione
+        let transitionProgress = 1.0;        // Progresso della transizione (1.0 = completato)
+        const transitionSpeed = 0.02;        // Velocità della transizione (valore più basso = più lenta)
 
         // Carica tutte le immagini
         let bgImagesLoaded = 0;
@@ -503,15 +508,44 @@
 
         // Funzione per ottenere l'immagine di sfondo corrente in base al punteggio
         function getCurrentBackground() {
-            for (let i = 0; i < bgImages.length; i++) {
+            // Determina quale sfondo dovrebbe essere visualizzato in base al punteggio
+            let targetIndex = 0;
+             for (let i = 0; i < bgImages.length; i++) {
                 if (score >= bgImages[i].minScore && score < bgImages[i].maxScore) {
-                    return bgImages[i];
+                targetIndex = i;
+                break;
+        }
+    }
+    // Controlla se dobbiamo avviare una nuova transizione
+            if (targetIndex !== targetBackgroundIndex) {
+            // Solo se la transizione precedente è completata o quasi
+                 if (transitionProgress >= 0.95) {
+                    // Salva l'indice corrente prima di cambiarlo
+                    currentBackgroundIndex = targetBackgroundIndex;
+                         // Imposta il nuovo target
+                    targetBackgroundIndex = targetIndex;
+                         // Resetta il progresso della transizione
+                    transitionProgress = 0.0;
+            
+                 console.log(`Avvio transizione da sfondo ${currentBackgroundIndex} a ${targetBackgroundIndex}`);
+                }
+             }
+    
+    // Avanza il progresso della transizione se necessario
+            if (transitionProgress < 1.0 && gameStarted && !gameOver) {
+                transitionProgress += transitionSpeed;
+                // Assicurati che non superi 1.0
+                if (transitionProgress > 1.0) {
+                     transitionProgress = 1.0;
                 }
             }
-            // Fallback all'ultimo sfondo se nessuno corrisponde (non dovrebbe mai accadere)
-            return bgImages[bgImages.length - 1];
-        }
-        
+    
+            return {
+                current: bgImages[currentBackgroundIndex],
+                target: bgImages[targetBackgroundIndex],
+                progress: transitionProgress
+             };
+}    
         // Caricamento delle immagini del personaggio
         const birdImage1 = new Image(); // Immagine per la discesa
         const birdImage2 = new Image(); // Immagine per la salita
@@ -698,54 +732,83 @@
         }
         
         // Funzione di disegno dello sfondo
-        function drawBackground() {
-            // Ottieni lo sfondo corrente in base al punteggio
-            const currentBg = getCurrentBackground();
-            
-            // Disegna l'immagine di sfondo se caricata
-            if (currentBg.loaded) {
-                // Usa il rapporto d'aspetto dell'immagine corrente
-                const currentRatio = currentBg.ratio;
-                
-                // Calcola le dimensioni per mantenere il rapporto d'aspetto originale dell'immagine
-                let bgWidth, bgHeight, yOffset = 0;
-                
-                // Determinazione delle dimensioni mantenendo il rapporto originale
-                if (canvas.width / canvas.height > currentRatio) {
-                    // Se il canvas è più largo rispetto al rapporto dell'immagine
-                    bgWidth = canvas.width;
-                    bgHeight = bgWidth * currentRatio;
-                    // Calcola l'offset verticale per centrare l'immagine
-                    yOffset = (canvas.height - bgHeight) / 2;
-                } else {
-                    // Se il canvas è più alto rispetto al rapporto dell'immagine
-                    bgHeight = canvas.height;
-                    bgWidth = bgHeight / currentRatio;
-                    // In questo caso non è necessario l'offset verticale
-                    yOffset = 0;
-                }
-                
-                // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
-                ctx.drawImage(currentBg.image, bgX % bgWidth, yOffset, bgWidth, bgHeight);
-                ctx.drawImage(currentBg.image, (bgX % bgWidth) + bgWidth, yOffset, bgWidth, bgHeight);
-                
-                // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
-                if (Math.abs(bgX) >= bgWidth) {
-                    bgX = bgX % bgWidth;
-                }
-                
-                // Riempie eventuali spazi vuoti sopra o sotto l'immagine con il nero
-                if (yOffset > 0) {
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(0, 0, canvas.width, yOffset); // Spazio sopra
-                    ctx.fillRect(0, yOffset + bgHeight, canvas.width, yOffset); // Spazio sotto
-                }
-            } else {
-                // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
+        // 3. Modifica la funzione drawBackground per applicare la transizione
+function drawBackground() {
+    // Ottieni le informazioni di sfondo correnti, comprese le informazioni sulla transizione
+    const bgInfo = getCurrentBackground();
+    const currentBg = bgInfo.current;
+    const targetBg = bgInfo.target;
+    const progress = bgInfo.progress;
+    
+    // Controllo se entrambe le immagini sono caricate
+    if (!currentBg.loaded || !targetBg.loaded) {
+        // Se una delle immagini non è caricata, usa uno sfondo nero
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+    
+    // Funzione helper per disegnare un singolo sfondo con opacità
+    function drawSingleBackground(bg, opacity) {
+        if (!bg.loaded) return;
+        
+        // Usa il rapporto d'aspetto dell'immagine corrente
+        const currentRatio = bg.ratio;
+        
+        // Calcola le dimensioni per mantenere il rapporto d'aspetto originale dell'immagine
+        let bgWidth, bgHeight, yOffset = 0;
+        
+        // Determinazione delle dimensioni mantenendo il rapporto originale
+        if (canvas.width / canvas.height > currentRatio) {
+            // Se il canvas è più largo rispetto al rapporto dell'immagine
+            bgWidth = canvas.width;
+            bgHeight = bgWidth * currentRatio;
+            // Calcola l'offset verticale per centrare l'immagine
+            yOffset = (canvas.height - bgHeight) / 2;
+        } else {
+            // Se il canvas è più alto rispetto al rapporto dell'immagine
+            bgHeight = canvas.height;
+            bgWidth = bgHeight / currentRatio;
+            // In questo caso non è necessario l'offset verticale
+            yOffset = 0;
         }
+        
+        // Salva il contesto attuale
+        ctx.save();
+        
+        // Imposta l'opacità globale
+        ctx.globalAlpha = opacity;
+        
+        // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
+        ctx.drawImage(bg.image, bgX % bgWidth, yOffset, bgWidth, bgHeight);
+        ctx.drawImage(bg.image, (bgX % bgWidth) + bgWidth, yOffset, bgWidth, bgHeight);
+        
+        // Ripristina il contesto
+        ctx.restore();
+        
+        // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
+        if (Math.abs(bgX) >= bgWidth) {
+            bgX = bgX % bgWidth;
+        }
+        
+        // Riempie eventuali spazi vuoti sopra o sotto l'immagine con il nero
+        if (yOffset > 0) {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, yOffset); // Spazio sopra
+            ctx.fillRect(0, yOffset + bgHeight, canvas.width, yOffset); // Spazio sotto
+        }
+    }
+    
+    // Disegna entrambi gli sfondi con la giusta opacità per creare l'effetto di transizione
+    if (progress < 1.0) {
+        // Durante la transizione, disegna entrambi gli sfondi
+        drawSingleBackground(currentBg, 1.0 - progress); // Lo sfondo corrente svanisce
+        drawSingleBackground(targetBg, progress); // Lo sfondo target appare
+    } else {
+        // Transizione completata, disegna solo lo sfondo target
+        drawSingleBackground(targetBg, 1.0);
+    }
+}
         
         // Funzione per disegnare il punteggio
         function drawScore() {
