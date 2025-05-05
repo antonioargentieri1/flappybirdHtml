@@ -788,93 +788,99 @@
         }
         
         // Funzione di disegno dello sfondo migliorata per transizioni continue
-        function drawBackground() {
-            // Verifica se è necessario avviare la transizione allo sfondo successivo in base al punteggio
-            if (!transitionTriggered && score >= bgImages[currentBgIndex].maxScore && currentBgIndex < bgImages.length - 1) {
-                transitionTriggered = true;
-                nextBgIndex = currentBgIndex + 1;
-                transitionX = canvas.width; // Posiziona lo sfondo successivo fuori dallo schermo a destra
-            }
-            
-            // Ottieni lo sfondo corrente
-            const currentBg = bgImages[currentBgIndex];
-            
-            // Disegna lo sfondo corrente se caricato
-            if (currentBg.loaded) {
-                // Usa il rapporto d'aspetto dell'immagine corrente
-                const currentRatio = currentBg.ratio;
+        // Modifica alla funzione drawBackground() per eliminare la riga nera tra sfondi
+function drawBackground() {
+    // Verifica se è necessario avviare la transizione allo sfondo successivo in base al punteggio
+    if (!transitionTriggered && score >= bgImages[currentBgIndex].maxScore && currentBgIndex < bgImages.length - 1) {
+        transitionTriggered = true;
+        nextBgIndex = currentBgIndex + 1;
+        transitionX = canvas.width; // Posiziona lo sfondo successivo fuori dallo schermo a destra
+    }
+    
+    // Ottieni lo sfondo corrente
+    const currentBg = bgImages[currentBgIndex];
+    
+    // Disegna lo sfondo corrente se caricato
+    if (currentBg.loaded) {
+        // Usa il rapporto d'aspetto dell'immagine corrente
+        const currentRatio = currentBg.ratio;
+        
+        // Calcola le dimensioni per mantenere il rapporto d'aspetto originale dell'immagine
+        let bgWidth, bgHeight, yOffset = 0;
+        
+        // Determinazione delle dimensioni mantenendo il rapporto originale
+        if (canvas.width / canvas.height > currentRatio) {
+            // Se il canvas è più largo rispetto al rapporto dell'immagine
+            bgWidth = canvas.width;
+            bgHeight = bgWidth * currentRatio;
+            // Calcola l'offset verticale per centrare l'immagine
+            yOffset = (canvas.height - bgHeight) / 2;
+        } else {
+            // Se il canvas è più alto rispetto al rapporto dell'immagine
+            bgHeight = canvas.height;
+            bgWidth = bgHeight / currentRatio;
+            // In questo caso non è necessario l'offset verticale
+            yOffset = 0;
+        }
+        
+        // Applica un leggero padding per evitare bordi neri tra le immagini
+        const padding = 2;
+        
+        // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
+        // Aggiungi il padding per evitare lo spazio tra le immagini
+        ctx.drawImage(currentBg.image, bgX % bgWidth - padding, yOffset, bgWidth + padding * 2, bgHeight);
+        ctx.drawImage(currentBg.image, (bgX % bgWidth) + bgWidth - padding, yOffset, bgWidth + padding * 2, bgHeight);
+        
+        // Se è in corso una transizione, disegna anche lo sfondo successivo
+        if (transitionTriggered && nextBgIndex < bgImages.length) {
+            const nextBg = bgImages[nextBgIndex];
+            if (nextBg.loaded) {
+                const nextRatio = nextBg.ratio || currentRatio;
                 
-                // Calcola le dimensioni per mantenere il rapporto d'aspetto originale dell'immagine
-                let bgWidth, bgHeight, yOffset = 0;
+                // Calcola le dimensioni per lo sfondo successivo
+                let nextBgWidth, nextBgHeight, nextYOffset = 0;
                 
-                // Determinazione delle dimensioni mantenendo il rapporto originale
-                if (canvas.width / canvas.height > currentRatio) {
-                    // Se il canvas è più largo rispetto al rapporto dell'immagine
-                    bgWidth = canvas.width;
-                    bgHeight = bgWidth * currentRatio;
-                    // Calcola l'offset verticale per centrare l'immagine
-                    yOffset = (canvas.height - bgHeight) / 2;
+                if (canvas.width / canvas.height > nextRatio) {
+                    nextBgWidth = canvas.width;
+                    nextBgHeight = nextBgWidth * nextRatio;
+                    nextYOffset = (canvas.height - nextBgHeight) / 2;
                 } else {
-                    // Se il canvas è più alto rispetto al rapporto dell'immagine
-                    bgHeight = canvas.height;
-                    bgWidth = bgHeight / currentRatio;
-                    // In questo caso non è necessario l'offset verticale
-                    yOffset = 0;
+                    nextBgHeight = canvas.height;
+                    nextBgWidth = nextBgHeight / nextRatio;
+                    nextYOffset = 0;
                 }
                 
-                // Disegna due copie dell'immagine affiancate per creare l'effetto continuo
-                ctx.drawImage(currentBg.image, bgX % bgWidth, yOffset, bgWidth, bgHeight);
-                ctx.drawImage(currentBg.image, (bgX % bgWidth) + bgWidth, yOffset, bgWidth, bgHeight);
+                // Disegna lo sfondo successivo con l'offset di transizione
+                // Aggiungi il padding anche qui
+                ctx.drawImage(nextBg.image, transitionX - padding, nextYOffset, nextBgWidth + padding * 2, nextBgHeight);
+                ctx.drawImage(nextBg.image, transitionX + nextBgWidth - padding, nextYOffset, nextBgWidth + padding * 2, nextBgHeight);
                 
-                // Se è in corso una transizione, disegna anche lo sfondo successivo
-                if (transitionTriggered && nextBgIndex < bgImages.length) {
-                    const nextBg = bgImages[nextBgIndex];
-                    if (nextBg.loaded) {
-                        const nextRatio = nextBg.ratio || currentRatio;
-                        
-                        // Calcola le dimensioni per lo sfondo successivo
-                        let nextBgWidth, nextBgHeight, nextYOffset = 0;
-                        
-                        if (canvas.width / canvas.height > nextRatio) {
-                            nextBgWidth = canvas.width;
-                            nextBgHeight = nextBgWidth * nextRatio;
-                            nextYOffset = (canvas.height - nextBgHeight) / 2;
-                        } else {
-                            nextBgHeight = canvas.height;
-                            nextBgWidth = nextBgHeight / nextRatio;
-                            nextYOffset = 0;
-                        }
-                        
-                        // Disegna lo sfondo successivo con l'offset di transizione
-                        ctx.drawImage(nextBg.image, transitionX, nextYOffset, nextBgWidth, nextBgHeight);
-                        ctx.drawImage(nextBg.image, transitionX + nextBgWidth, nextYOffset, nextBgWidth, nextBgHeight);
-                        
-                        // Se la transizione è completata, rendi lo sfondo successivo quello corrente
-                        if (transitionX <= 0) {
-                            currentBgIndex = nextBgIndex;
-                            transitionTriggered = false;
-                            bgX = 0; // Resetta la posizione dello sfondo
-                        }
-                    }
+                // Se la transizione è completata, rendi lo sfondo successivo quello corrente
+                if (transitionX <= 0) {
+                    currentBgIndex = nextBgIndex;
+                    transitionTriggered = false;
+                    bgX = 0; // Resetta la posizione dello sfondo
                 }
-                
-                // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
-                if (Math.abs(bgX) >= bgWidth) {
-                    bgX = bgX % bgWidth;
-                }
-                
-                // Riempie eventuali spazi vuoti sopra o sotto l'immagine con il nero
-                if (yOffset > 0) {
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(0, 0, canvas.width, yOffset); // Spazio sopra
-                    ctx.fillRect(0, yOffset + bgHeight, canvas.width, yOffset); // Spazio sotto
-                }
-            } else {
-                // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
         }
+        
+        // Se l'immagine è completamente fuori dallo schermo, resetta la posizione
+        if (Math.abs(bgX) >= bgWidth) {
+            bgX = bgX % bgWidth;
+        }
+        
+        // Riempie eventuali spazi vuoti sopra o sotto l'immagine con il nero
+        if (yOffset > 0) {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, yOffset); // Spazio sopra
+            ctx.fillRect(0, yOffset + bgHeight, canvas.width, yOffset); // Spazio sotto
+        }
+    } else {
+        // Se l'immagine di sfondo non è caricata, usa uno sfondo nero
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+}
         
         // Funzione per aggiornare lo sfondo e gestire la transizione
         function updateBackground(dt) {
